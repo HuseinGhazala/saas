@@ -466,7 +466,7 @@ const LuckyWheel = () => {
                               <Lock size={48} className="text-slate-400" />
                           </div>
                           <h2 className="text-2xl font-bold mb-2">لوحة التحكم محمية</h2>
-                          <p className="text-slate-500 mb-6">أدخل كلمة المرور للمتابعة (الافتراضية: admin)</p>
+                          <p className="text-slate-500 mb-6">أدخل كلمة المرور للمتابعة </p>
                           <form onSubmit={handleUnlockDashboard} className="flex gap-2 w-full max-w-xs">
                               <input 
                                   type="password" 
