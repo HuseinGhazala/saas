@@ -129,24 +129,44 @@ const LuckyWheel = () => {
   const loadSettingsFromCloud = async () => {
     try {
       const scriptUrl = googleScriptUrl || DEFAULT_SCRIPT_URL;
-      const url = `${scriptUrl}?action=getSettings`;
+      const url = `${scriptUrl}?action=getSettings&t=${Date.now()}`; // إضافة timestamp لتجنب الـ cache
       
       const response = await fetch(url, {
         method: 'GET',
         mode: 'cors',
-        cache: 'no-cache'
+        cache: 'no-cache',
+        headers: {
+          'Accept': 'application/json'
+        }
       });
       
       if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.settings) {
-          return data.settings;
+        const text = await response.text();
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch (e) {
+          console.error('Error parsing JSON:', e, text);
+          return null;
         }
+        
+        if (data.success && data.settings) {
+          console.log('✅ تم تحميل البيانات من السحابة:', data.settings);
+          return data.settings;
+        } else {
+          console.warn('⚠️ البيانات غير موجودة في السحابة:', data);
+        }
+      } else {
+        console.error('❌ خطأ في الاستجابة:', response.status, response.statusText);
       }
     } catch (error) {
-      console.error('Error loading settings from cloud:', error);
+      console.error('❌ خطأ في تحميل البيانات من السحابة:', error);
       // استخدام localStorage كبديل عند الفشل
-      return loadSettingsFromStorage();
+      const localData = loadSettingsFromStorage();
+      if (localData) {
+        console.log('📦 استخدام البيانات المحلية كبديل');
+        return localData;
+      }
     }
     return null;
   };
@@ -330,9 +350,52 @@ const LuckyWheel = () => {
           localStorage.setItem('backgroundSettings', JSON.stringify(cloudSettings.backgroundSettings || {}));
           localStorage.setItem('winSound', cloudSettings.winSound || "");
           localStorage.setItem('loseSound', cloudSettings.loseSound || "");
+          
+          console.log('✅ تم تحديث جميع الإعدادات من السحابة');
+        } else {
+          console.warn('⚠️ لم يتم العثور على بيانات في السحابة، استخدام القيم الافتراضية');
+          // استخدام البيانات المحلية إذا كانت موجودة
+          const localData = loadSettingsFromStorage();
+          if (localData) {
+            setSegments(localData.segments || initialSegments);
+            setAvailableIds((localData.segments || initialSegments).map(s => s.id));
+            setMaxSpins(localData.maxSpins || 1);
+            setRemainingSpins(localData.maxSpins || 1);
+            setStoreLogo(localData.logo || null);
+            setSocialLinks(localData.socialLinks || {
+              facebook: '',
+              instagram: '',
+              twitter: '',
+              snapchat: '',
+              whatsapp: '',
+              website: ''
+            });
+            setBackgroundSettings(localData.backgroundSettings || {
+              type: 'color',
+              color: '#0f172a',
+              desktopImage: null,
+              mobileImage: null
+            });
+            setWinSound(localData.winSound || "https://www.soundjay.com/human/sounds/applause-01.mp3");
+            setLoseSound(localData.loseSound || "https://www.soundjay.com/misc/sounds/fail-trombone-01.mp3");
+            console.log('📦 تم استخدام البيانات المحلية');
+          }
         }
       } catch (error) {
-        console.error('Error loading cloud settings:', error);
+        console.error('❌ خطأ في تحميل الإعدادات:', error);
+        // استخدام البيانات المحلية كبديل
+        const localData = loadSettingsFromStorage();
+        if (localData) {
+          setSegments(localData.segments || initialSegments);
+          setAvailableIds((localData.segments || initialSegments).map(s => s.id));
+          setMaxSpins(localData.maxSpins || 1);
+          setRemainingSpins(localData.maxSpins || 1);
+          setStoreLogo(localData.logo || null);
+          setSocialLinks(localData.socialLinks || {});
+          setBackgroundSettings(localData.backgroundSettings || {});
+          setWinSound(localData.winSound || "");
+          setLoseSound(localData.loseSound || "");
+        }
       } finally {
         setIsLoadingSettings(false);
       }
