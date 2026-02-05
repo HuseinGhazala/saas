@@ -128,9 +128,19 @@ const LuckyWheel = () => {
   // دالة لجلب البيانات من Google Sheets (السحابة)
   const loadSettingsFromCloud = async () => {
     try {
-      const scriptUrl = googleScriptUrl || DEFAULT_SCRIPT_URL;
-      if (!scriptUrl || scriptUrl === DEFAULT_SCRIPT_URL) {
+      // الحصول على الرابط من localStorage أولاً (أحدث قيمة)
+      const savedUrl = localStorage.getItem('googleScriptUrl');
+      const scriptUrl = savedUrl || googleScriptUrl || DEFAULT_SCRIPT_URL;
+      
+      // التحقق من أن الرابط موجود وصحيح
+      if (!scriptUrl || scriptUrl.trim() === '') {
         console.warn('⚠️ رابط Google Script غير محدد، استخدام البيانات المحلية');
+        return loadSettingsFromStorage();
+      }
+      
+      // التحقق من أن الرابط يحتوي على script.google.com
+      if (!scriptUrl.includes('script.google.com')) {
+        console.warn('⚠️ رابط Google Script غير صحيح:', scriptUrl);
         return loadSettingsFromStorage();
       }
       
@@ -1143,11 +1153,20 @@ const LuckyWheel = () => {
                                               type="text" 
                                               value={tempGoogleScriptUrl}
                                               onChange={(e) => setTempGoogleScriptUrl(e.target.value)}
-                                              placeholder="https://script.google.com/macros/s/..."
+                                              placeholder="https://script.google.com/macros/s/AKfycb..."
                                               className="w-full p-3 border-2 border-slate-200 rounded-lg text-sm font-mono text-slate-600 focus:border-green-500 outline-none bg-slate-50 mb-2"
                                           />
-                                          <p className="text-xs text-slate-500 flex items-center gap-1">
-                                              <CheckCircle size={12} className="text-green-500" /> سيتم حفظ هذا الرابط لاستخدامه عند تسجيل بيانات العملاء الجدد.
+                                          {tempGoogleScriptUrl && tempGoogleScriptUrl.includes('script.google.com') ? (
+                                              <p className="text-xs text-green-600 flex items-center gap-1">
+                                                  <CheckCircle size={12} /> رابط صحيح! سيتم استخدامه لتحميل وحفظ البيانات.
+                                              </p>
+                                          ) : (
+                                              <p className="text-xs text-yellow-600 flex items-center gap-1">
+                                                  <AlertCircle size={12} /> أدخل رابط Google Script الصحيح من Deploy → Web app URL
+                                              </p>
+                                          )}
+                                          <p className="text-xs text-slate-500 mt-1">
+                                              ⚠️ مهم: تأكد من أن "Who has access" = "Anyone" عند النشر
                                           </p>
                                       </div>
                                   </div>
