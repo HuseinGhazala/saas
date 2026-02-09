@@ -5,15 +5,22 @@ function doPost(e) {
   try {
     const action = e.parameter.action;
     
+    // تسجيل البيانات المستلمة للتشخيص
+    Logger.log('Received POST request');
+    Logger.log('Action: ' + action);
+    Logger.log('Parameters: ' + JSON.stringify(e.parameter));
+    
     if (action === 'saveSettings') {
       return saveSettings(e);
     } else if (action === 'saveWin') {
       return saveWinData(e);
     } else {
-      // حفظ بيانات المستخدم (الوظيفة الأصلية)
+      // حفظ بيانات المستخدم (الوظيفة الأصلية - بدون action parameter)
+      Logger.log('Saving user data (no action specified)');
       return saveUserData(e);
     }
   } catch (error) {
+    Logger.log('Error in doPost: ' + error.toString());
     return ContentService.createTextOutput(JSON.stringify({
       success: false,
       error: error.toString()
@@ -161,20 +168,40 @@ function getSettings() {
 
 // حفظ بيانات المستخدم (الوظيفة الأصلية)
 function saveUserData(e) {
-  const ss = initializeSheets();
-  let userDataSheet = ss.getSheetByName('UserData');
-  
-  const name = e.parameter.name || '';
-  const email = e.parameter.email || '';
-  const phone = e.parameter.phone || '';
-  const timestamp = e.parameter.timestamp || new Date().toISOString();
-  
-  userDataSheet.appendRow([name, email, phone, timestamp]);
-  
-  return ContentService.createTextOutput(JSON.stringify({
-    success: true,
-    message: 'User data saved'
-  })).setMimeType(ContentService.MimeType.JSON);
+  try {
+    Logger.log('saveUserData called');
+    Logger.log('Parameters: ' + JSON.stringify(e.parameter));
+    
+    const ss = initializeSheets();
+    let userDataSheet = ss.getSheetByName('UserData');
+    
+    const name = e.parameter.name || '';
+    const email = e.parameter.email || '';
+    const phone = e.parameter.phone || '';
+    const timestamp = e.parameter.timestamp || new Date().toISOString();
+    
+    Logger.log('Data to save: ' + name + ', ' + email + ', ' + phone);
+    
+    // التأكد من وجود الأعمدة
+    if (userDataSheet.getLastRow() === 0) {
+      userDataSheet.appendRow(['Name', 'Email', 'Phone', 'Timestamp']);
+    }
+    
+    userDataSheet.appendRow([name, email, phone, timestamp]);
+    
+    Logger.log('User data saved successfully');
+    
+    return ContentService.createTextOutput(JSON.stringify({
+      success: true,
+      message: 'User data saved'
+    })).setMimeType(ContentService.MimeType.JSON);
+  } catch (error) {
+    Logger.log('Error in saveUserData: ' + error.toString());
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      error: error.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
 }
 
 // حفظ بيانات الجائزة الفائزة

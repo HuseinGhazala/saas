@@ -351,6 +351,95 @@ const LuckyWheel = () => {
     }
   };
 
+  // حماية من فتح Developer Tools
+  useEffect(() => {
+    const preventDevTools = () => {
+      // منع اختصارات لوحة المفاتيح
+      const handleKeyDown = (e) => {
+        // F12
+        if (e.keyCode === 123) {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }
+        // Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C
+        if (e.ctrlKey && e.shiftKey && [73, 74, 67].includes(e.keyCode)) {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }
+        // Ctrl+U (View Source)
+        if (e.ctrlKey && e.keyCode === 85) {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }
+      };
+      
+      // منع النقر بالزر الأيمن
+      const handleContextMenu = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      };
+      
+      // منع اختيار النص
+      const handleSelectStart = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      };
+      
+      // منع نسخ/قص النص
+      const handleCopy = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      };
+      
+      const handleCut = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      };
+      
+      // كشف فتح DevTools
+      let devtoolsOpen = false;
+      const checkDevTools = setInterval(() => {
+        const threshold = 160;
+        if (window.outerHeight - window.innerHeight > threshold || 
+            window.outerWidth - window.innerWidth > threshold) {
+          if (!devtoolsOpen) {
+            devtoolsOpen = true;
+            // يمكن إضافة إجراء هنا
+          }
+        } else {
+          devtoolsOpen = false;
+        }
+      }, 500);
+      
+      // إضافة Event Listeners
+      document.addEventListener('keydown', handleKeyDown, true);
+      document.addEventListener('contextmenu', handleContextMenu, true);
+      document.addEventListener('selectstart', handleSelectStart, true);
+      document.addEventListener('copy', handleCopy, true);
+      document.addEventListener('cut', handleCut, true);
+      
+      // تنظيف عند إلغاء التثبيت
+      return () => {
+        document.removeEventListener('keydown', handleKeyDown, true);
+        document.removeEventListener('contextmenu', handleContextMenu, true);
+        document.removeEventListener('selectstart', handleSelectStart, true);
+        document.removeEventListener('copy', handleCopy, true);
+        document.removeEventListener('cut', handleCut, true);
+        clearInterval(checkDevTools);
+      };
+    };
+    
+    const cleanup = preventDevTools();
+    return cleanup;
+  }, []);
+
   useEffect(() => {
     spinAudioRef.current = new Audio('https://www.soundjay.com/misc/sounds/drum-roll-01.mp3'); 
     
@@ -382,9 +471,22 @@ const LuckyWheel = () => {
         if (cloudSettings && cloudSettings.segments) {
           console.log('✅ تم تحميل البيانات من السحابة، عدد الجوائز:', cloudSettings.segments.length);
           
+          // التأكد من أن الكوبونات المستخدمة محذوفة
+          const cleanedSegments = cloudSettings.segments.map(seg => ({
+            ...seg,
+            couponCodes: seg.couponCodes || [] // التأكد من وجود المصفوفة
+          }));
+          
+          console.log('🔍 التحقق من الكوبونات:');
+          cleanedSegments.forEach(seg => {
+            if (seg.couponCodes && seg.couponCodes.length > 0) {
+              console.log(`  - ${seg.text}: ${seg.couponCodes.length} كوبون متبقي`);
+            }
+          });
+          
           // تحديث جميع الحالات بالبيانات من السحابة
-          setSegments(cloudSettings.segments);
-          setAvailableIds(cloudSettings.segments.map(s => s.id));
+          setSegments(cleanedSegments);
+          setAvailableIds(cleanedSegments.map(s => s.id));
           setMaxSpins(cloudSettings.maxSpins || 1);
           setRemainingSpins(cloudSettings.maxSpins || 1);
           setStoreLogo(cloudSettings.logo || null);
@@ -405,8 +507,8 @@ const LuckyWheel = () => {
           setWinSound(cloudSettings.winSound || "https://www.soundjay.com/human/sounds/applause-01.mp3");
           setLoseSound(cloudSettings.loseSound || "https://www.soundjay.com/misc/sounds/fail-trombone-01.mp3");
           
-          // حفظ في localStorage كنسخة احتياطية
-          localStorage.setItem('wheelSegments', JSON.stringify(cloudSettings.segments));
+          // حفظ في localStorage كنسخة احتياطية (باستخدام cleanedSegments)
+          localStorage.setItem('wheelSegments', JSON.stringify(cleanedSegments));
           localStorage.setItem('maxSpins', (cloudSettings.maxSpins || 1).toString());
           if (cloudSettings.logo) {
             localStorage.setItem('storeLogo', cloudSettings.logo);
@@ -588,14 +690,42 @@ const LuckyWheel = () => {
             assignedCode = winningSegment.couponCodes[0];
             assignedMessage = "استخدم هذا الكوبون الآن! 🚀"; 
             
+            // حذف الكوبون المستخدم من المصفوفة
             const updatedSegments = segments.map(s => {
                 if (s.id === winningSegment.id) {
-                    return { ...s, couponCodes: s.couponCodes.slice(1) };
+                    // حذف الكوبون الأول فقط (الذي تم استخدامه)
+                    const remainingCodes = s.couponCodes.slice(1);
+                    console.log(`🗑️ تم حذف الكوبون المستخدم: ${assignedCode}`);
+                    console.log(`📊 الكوبونات المتبقية: ${remainingCodes.length}`);
+                    return { ...s, couponCodes: remainingCodes };
                 }
                 return s;
             });
+            
             setSegments(updatedSegments); 
-            setTempSegments(updatedSegments); 
+            setTempSegments(updatedSegments);
+            
+            // حفظ التحديثات في السحابة فوراً لضمان عدم تكرار الكوبون
+            const settingsToSave = {
+                segments: updatedSegments,
+                maxSpins: maxSpins,
+                logo: storeLogo,
+                socialLinks: socialLinks,
+                backgroundSettings: backgroundSettings,
+                winSound: winSound,
+                loseSound: loseSound,
+                googleScriptUrl: googleScriptUrl
+            };
+            
+            // حفظ في السحابة (Supabase و Google Sheets)
+            saveSettingsToCloud(settingsToSave).then(saved => {
+                if (saved) {
+                    console.log('✅ تم حفظ التحديثات في السحابة - الكوبون لن يظهر مرة أخرى');
+                } else {
+                    console.warn('⚠️ فشل حفظ التحديثات في السحابة');
+                }
+            });
+            
             setAiContent({ code: assignedCode, message: assignedMessage });
         } else {
             generateGeminiContent(winningSegment.text, winningSegment.type);
@@ -704,6 +834,8 @@ const LuckyWheel = () => {
   };
 
   const resetGame = () => {
+    // ⚠️ مهم: resetGame لا يعيد الكوبونات المستخدمة
+    // الكوبونات المستخدمة تبقى محذوفة للأبد
     setAvailableIds(segments.map(s => s.id));
     setHistory([]);
     setWinner(null);
@@ -713,6 +845,8 @@ const LuckyWheel = () => {
     setAiContent(null);
     setShowConfetti(false);
     setRemainingSpins(maxSpins);
+    
+    console.log('🔄 تم إعادة تعيين اللعبة - الكوبونات المستخدمة تبقى محذوفة');
   };
 
   const handleCopy = (text) => {
@@ -1042,15 +1176,23 @@ const LuckyWheel = () => {
     <div 
       className="min-h-screen flex flex-col items-center justify-center p-4 font-sans text-slate-100 overflow-hidden relative transition-all duration-500 main-container" 
       dir="rtl"
+      style={{ fontFamily: "'IBM Plex Sans Arabic', sans-serif" }}
     >
       {/* Background Logic */}
       <style>{`
+        * {
+          font-family: 'IBM Plex Sans Arabic', sans-serif !important;
+        }
+        body {
+          font-family: 'IBM Plex Sans Arabic', sans-serif !important;
+        }
         .main-container {
           background-color: ${backgroundSettings.type === 'color' ? backgroundSettings.color : '#0f172a'};
           background-size: cover;
           background-position: center;
           background-repeat: no-repeat;
           background-attachment: fixed;
+          font-family: 'IBM Plex Sans Arabic', sans-serif !important;
           ${backgroundSettings.type === 'image' && backgroundSettings.desktopImage ? `background-image: url(${backgroundSettings.desktopImage});` : ''}
         }
         
