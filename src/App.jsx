@@ -6,6 +6,7 @@ import {
   Upload, Image as ImageIcon, Facebook, Instagram, Twitter, Globe, MessageCircle, Share2,
   Database, Link as LinkIcon, ExternalLink, Music, Play, Palette, Smartphone, Monitor, Ghost
 } from 'lucide-react';
+import { getSettings as getSupabaseSettings, saveSettings as saveSupabaseSettings, saveUserData as saveSupabaseUserData, saveWinData as saveSupabaseWinData } from './lib/supabase';
 
 // --- مكون الكونفيتي (Confetti Canvas) ---
 const ConfettiEffect = ({ active }) => {
@@ -125,97 +126,109 @@ const LuckyWheel = () => {
     }
   };
 
-  // دالة لجلب البيانات من Google Sheets (السحابة)
+  // دالة لجلب البيانات من السحابة (Supabase أو Google Sheets)
   const loadSettingsFromCloud = async () => {
     try {
-      // الحصول على الرابط من localStorage أولاً (أحدث قيمة)
+      // محاولة تحميل من Supabase أولاً
+      const useSupabase = import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_URL !== 'YOUR_SUPABASE_URL';
+      
+      if (useSupabase) {
+        console.log('🔄 جاري تحميل البيانات من Supabase...');
+        const supabaseSettings = await getSupabaseSettings();
+        if (supabaseSettings) {
+          console.log('✅ تم تحميل البيانات من Supabase بنجاح!');
+          return supabaseSettings;
+        }
+        console.warn('⚠️ لم يتم العثور على بيانات في Supabase، جاري المحاولة من Google Sheets...');
+      }
+      
+      // إذا فشل Supabase أو لم يكن مفعّل، جرب Google Sheets
       const savedUrl = localStorage.getItem('googleScriptUrl');
       const scriptUrl = savedUrl || googleScriptUrl || DEFAULT_SCRIPT_URL;
       
-      // التحقق من أن الرابط موجود وصحيح
-      if (!scriptUrl || scriptUrl.trim() === '') {
+      if (!scriptUrl || scriptUrl.trim() === '' || !scriptUrl.includes('script.google.com')) {
         console.warn('⚠️ رابط Google Script غير محدد، استخدام البيانات المحلية');
         return loadSettingsFromStorage();
       }
       
-      // التحقق من أن الرابط يحتوي على script.google.com
-      if (!scriptUrl.includes('script.google.com')) {
-        console.warn('⚠️ رابط Google Script غير صحيح:', scriptUrl);
-        return loadSettingsFromStorage();
-      }
+      const url = `${scriptUrl}?action=getSettings&t=${Date.now()}`;
+      console.log('🔄 جاري تحميل البيانات من Google Sheets:', url);
       
-      const url = `${scriptUrl}?action=getSettings&t=${Date.now()}`; // إضافة timestamp لتجنب الـ cache
-      console.log('🔄 جاري تحميل البيانات من:', url);
-      
-      // استخدام fetch مع CORS (Google Apps Script يدعم CORS عند النشر بشكل صحيح)
       const response = await fetch(url, {
         method: 'GET',
-        mode: 'cors', // استخدام cors لأن Google Script منشور بشكل صحيح
+        mode: 'cors',
         cache: 'no-cache',
         headers: {
           'Accept': 'application/json'
         }
       });
       
-      console.log('📡 حالة الاستجابة:', response.status, response.statusText);
-      
       if (response.ok) {
         const text = await response.text();
-        console.log('📄 البيانات المستلمة:', text.substring(0, 200)); // طباعة أول 200 حرف للتحقق
-        
         let data;
         try {
           data = JSON.parse(text);
         } catch (e) {
-          console.error('❌ خطأ في تحليل JSON:', e, 'النص:', text);
+          console.error('❌ خطأ في تحليل JSON:', e);
           return loadSettingsFromStorage();
         }
         
         if (data.success && data.settings) {
-          console.log('✅ تم تحميل البيانات من السحابة بنجاح!');
-          console.log('📊 عدد الجوائز:', data.settings.segments?.length || 0);
+          console.log('✅ تم تحميل البيانات من Google Sheets بنجاح!');
           return data.settings;
-        } else {
-          console.warn('⚠️ البيانات غير موجودة في السحابة:', data);
-          return loadSettingsFromStorage();
         }
-      } else {
-        console.error('❌ خطأ في الاستجابة:', response.status, response.statusText);
-        return loadSettingsFromStorage();
       }
       
     } catch (error) {
       console.error('❌ خطأ في تحميل البيانات من السحابة:', error);
-      console.error('تفاصيل الخطأ:', error.message);
-      
-      // استخدام localStorage كبديل عند الفشل
-      const localData = loadSettingsFromStorage();
-      if (localData) {
-        console.log('📦 استخدام البيانات المحلية كبديل');
-        return localData;
-      }
+    }
+    
+    // استخدام localStorage كبديل
+    const localData = loadSettingsFromStorage();
+    if (localData) {
+      console.log('📦 استخدام البيانات المحلية كبديل');
+      return localData;
     }
     
     return null;
   };
 
-  // دالة لحفظ البيانات في Google Sheets (السحابة)
+  // دالة لحفظ البيانات في السحابة (Supabase أو Google Sheets)
   const saveSettingsToCloud = async (settings) => {
     try {
-      const formData = new FormData();
-      formData.append('action', 'saveSettings');
-      formData.append('settings', JSON.stringify(settings));
+      // محاولة الحفظ في Supabase أولاً
+      const useSupabase = import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_URL !== 'YOUR_SUPABASE_URL';
       
-      const response = await fetch(googleScriptUrl, {
-        method: 'POST',
-        body: formData,
-        mode: 'no-cors'
-      });
+      if (useSupabase) {
+        console.log('💾 جاري حفظ البيانات في Supabase...');
+        const saved = await saveSupabaseSettings(settings);
+        if (saved) {
+          console.log('✅ تم حفظ البيانات في Supabase بنجاح!');
+          return true;
+        }
+        console.warn('⚠️ فشل حفظ البيانات في Supabase، جاري المحاولة في Google Sheets...');
+      }
       
-      // مع no-cors لا يمكننا قراءة الـ response، لكن الطلب تم إرساله
-      return true;
+      // إذا فشل Supabase أو لم يكن مفعّل، جرب Google Sheets
+      const scriptUrl = googleScriptUrl || DEFAULT_SCRIPT_URL;
+      if (scriptUrl && scriptUrl.includes('script.google.com')) {
+        const formData = new FormData();
+        formData.append('action', 'saveSettings');
+        formData.append('settings', JSON.stringify(settings));
+        
+        await fetch(scriptUrl, {
+          method: 'POST',
+          body: formData,
+          mode: 'no-cors'
+        });
+        
+        console.log('✅ تم حفظ البيانات في Google Sheets');
+        return true;
+      }
+      
+      return false;
     } catch (error) {
-      console.error('Error saving settings to cloud:', error);
+      console.error('❌ خطأ في حفظ البيانات في السحابة:', error);
       return false;
     }
   };
@@ -611,22 +624,40 @@ const LuckyWheel = () => {
       if (winningSegment.type === 'prize') {
         setHistory(prev => [...prev, { ...winningSegment, wonCode: assignedCode }]);
         
-        // حفظ بيانات الجائزة الفائزة في Google Sheet
+        // حفظ بيانات الجائزة الفائزة في Supabase أو Google Sheets
         if (isRegistered && userData.name && userData.email && userData.phone) {
-          const winFormData = new FormData();
-          winFormData.append('action', 'saveWin');
-          winFormData.append('name', userData.name);
-          winFormData.append('email', userData.email);
-          winFormData.append('phone', userData.phone);
-          winFormData.append('prize', winningSegment.text);
-          winFormData.append('couponCode', assignedCode || aiContent?.code || 'N/A');
-          winFormData.append('timestamp', new Date().toISOString());
+          const winData = {
+            name: userData.name,
+            email: userData.email,
+            phone: userData.phone,
+            prize: winningSegment.text,
+            couponCode: assignedCode || aiContent?.code || 'N/A'
+          };
           
-          fetch(googleScriptUrl, { 
-            method: 'POST', 
-            body: winFormData, 
-            mode: 'no-cors' 
-          }).catch(err => console.log('Error saving win data:', err));
+          // محاولة الحفظ في Supabase أولاً
+          const useSupabase = import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_URL !== 'YOUR_SUPABASE_URL';
+          
+          if (useSupabase) {
+            saveSupabaseWinData(winData).catch(err => console.log('Error saving win data to Supabase:', err));
+          }
+          
+          // إذا فشل Supabase أو لم يكن مفعّل، استخدم Google Sheets
+          if (googleScriptUrl && googleScriptUrl.includes('script.google.com')) {
+            const winFormData = new FormData();
+            winFormData.append('action', 'saveWin');
+            winFormData.append('name', winData.name);
+            winFormData.append('email', winData.email);
+            winFormData.append('phone', winData.phone);
+            winFormData.append('prize', winData.prize);
+            winFormData.append('couponCode', winData.couponCode);
+            winFormData.append('timestamp', new Date().toISOString());
+            
+            fetch(googleScriptUrl, { 
+              method: 'POST', 
+              body: winFormData, 
+              mode: 'no-cors' 
+            }).catch(err => console.log('Error saving win data to Google Sheets:', err));
+          }
         }
       }
       setAvailableIds(prev => prev.filter(id => id !== winningId));
@@ -677,20 +708,34 @@ const LuckyWheel = () => {
     if (userData.name && userData.email && userData.phone) {
         setIsSubmitting(true);
         try {
-            const formData = new FormData();
-            formData.append('name', userData.name);
-            formData.append('email', userData.email);
-            formData.append('phone', userData.phone);
-            formData.append('timestamp', new Date().toISOString());
-
-            await fetch(googleScriptUrl, { method: 'POST', body: formData, mode: 'no-cors' });
+            // محاولة الحفظ في Supabase أولاً
+            const useSupabase = import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_URL !== 'YOUR_SUPABASE_URL';
+            let saved = false;
+            
+            if (useSupabase) {
+                saved = await saveSupabaseUserData({
+                    name: userData.name,
+                    email: userData.email,
+                    phone: userData.phone
+                });
+            }
+            
+            // إذا فشل Supabase أو لم يكن مفعّل، استخدم Google Sheets
+            if (!saved && googleScriptUrl && googleScriptUrl.includes('script.google.com')) {
+                const formData = new FormData();
+                formData.append('name', userData.name);
+                formData.append('email', userData.email);
+                formData.append('phone', userData.phone);
+                formData.append('timestamp', new Date().toISOString());
+                await fetch(googleScriptUrl, { method: 'POST', body: formData, mode: 'no-cors' });
+            }
             
             setIsRegistered(true);
             setShowRegistrationModal(false); 
             setTimeout(() => { spinWheel(true); }, 500);
         } catch (error) {
             console.error("Error sending data:", error);
-            alert("حدث خطأ في الاتصال، يرجى التأكد من الرابط والمحاولة مرة أخرى.");
+            alert("حدث خطأ في الاتصال، يرجى التأكد من الإعدادات والمحاولة مرة أخرى.");
         } finally {
             setIsSubmitting(false);
         }
