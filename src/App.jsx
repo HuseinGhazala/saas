@@ -802,7 +802,7 @@ const LuckyWheel = () => {
             console.log('🔗 الرابط:', scriptUrl);
             console.log('🎁 الجائزة:', winData.prize);
             
-            // استخدام URLSearchParams بدلاً من FormData
+            // استخدام URLSearchParams وإرساله كـ string
             const winParams = new URLSearchParams();
             winParams.append('action', 'saveWin');
             winParams.append('name', winData.name || '');
@@ -812,17 +812,21 @@ const LuckyWheel = () => {
             winParams.append('couponCode', winData.couponCode || '');
             winParams.append('timestamp', new Date().toISOString());
             
+            const winParamsString = winParams.toString();
+            console.log('📤 بيانات الجائزة المرسلة:', winParamsString);
+            
             // إرسال البيانات مع retry mechanism
             const sendWinToGoogleSheets = async (retries = 3) => {
                 for (let i = 0; i < retries; i++) {
                     try {
                         const response = await fetch(scriptUrl, { 
                             method: 'POST', 
-                            body: winParams,
+                            body: winParamsString,
                             mode: 'no-cors',
                             headers: {
                                 'Content-Type': 'application/x-www-form-urlencoded',
-                            }
+                            },
+                            redirect: 'follow'
                         });
                         console.log(`✅ محاولة ${i + 1}: تم إرسال بيانات الجائزة إلى Google Sheets`);
                         console.log('💡 تحقق من Google Sheet → Wins');
@@ -980,12 +984,15 @@ const LuckyWheel = () => {
                 console.log('🔗 الرابط:', scriptUrl);
                 console.log('📝 البيانات:', { name: userData.name, email: userData.email, phone: finalPhone });
                 
-                // استخدام URLSearchParams بدلاً من FormData لضمان وصول البيانات
+                // استخدام URLSearchParams وإرساله كـ string
                 const params = new URLSearchParams();
                 params.append('name', userData.name || '');
                 params.append('email', userData.email || '');
                 params.append('phone', finalPhone || '');
                 params.append('timestamp', new Date().toISOString());
+                
+                const paramsString = params.toString();
+                console.log('📤 البيانات المرسلة:', paramsString);
                 
                 // إرسال البيانات مع retry mechanism
                 const sendToGoogleSheets = async (retries = 3) => {
@@ -993,11 +1000,12 @@ const LuckyWheel = () => {
                         try {
                             const response = await fetch(scriptUrl, { 
                                 method: 'POST', 
-                                body: params,
+                                body: paramsString,
                                 mode: 'no-cors',
                                 headers: {
                                     'Content-Type': 'application/x-www-form-urlencoded',
-                                }
+                                },
+                                redirect: 'follow'
                             });
                             console.log(`✅ محاولة ${i + 1}: تم إرسال بيانات المستخدم إلى Google Sheets`);
                             console.log('💡 تحقق من Google Sheet → UserData');
