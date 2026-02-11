@@ -75,9 +75,10 @@ const ConfettiEffect = ({ active }) => {
 
 // --- مكون الفوتر المطابق للصورة (Pixel Perfect) ---
 const Footer = ({ logo, socialLinks, footerSettings }) => {
-    const footerDescription = footerSettings?.description || 'مرحبا بكم في خيمة الالعاب .. أسعد مكان يتجول فيه الصغار والكبار متخصص في بيع المنتجات الترفيهية هنا نصنع البهجة';
+    const footerDescription = footerSettings?.description || '';
     const footerLinks = footerSettings?.links || [];
-    const taxId = footerSettings?.taxId || '300155258800003';
+    const taxId = footerSettings?.taxId || '';
+    const businessPlatformId = (footerSettings?.businessPlatformId || '').trim();
     
     return (
       <footer className="w-full bg-white text-slate-800 border-t border-slate-100 mt-auto relative z-20 font-sans" dir="rtl">
@@ -102,29 +103,21 @@ const Footer = ({ logo, socialLinks, footerSettings }) => {
                        </p>
                   </div>
   
-                  {/* Col 2: Links (Center Right - 3 cols) - أول 5 روابط */}
+                  {/* Col 2: Links (Center Right - 3 cols) - أول 5 روابط - يظهر فقط إذا وجدت روابط */}
+                  {footerLinks.length > 0 && (
                   <div className="lg:col-span-3">
                       <h3 className="font-bold text-cyan-500 mb-5 text-lg">روابط تهمك</h3>
                       <ul className="space-y-2.5 text-sm text-slate-800 font-medium">
-                          {footerLinks.length > 0 ? (
-                              footerLinks.slice(0, 5).map((link, index) => (
-                                  <li key={index}>
-                                      <a href={link.url || '#'} target={link.url?.startsWith('http') ? '_blank' : '_self'} rel="noopener noreferrer" className="hover:text-cyan-600 transition-colors block">
-                                          {link.label || `رابط ${index + 1}`}
-                                      </a>
-                                  </li>
-                              ))
-                          ) : (
-                              <>
-                                  <li><a href="#" className="hover:text-cyan-600 transition-colors block">المدونة</a></li>
-                                  <li><a href="#" className="hover:text-cyan-600 transition-colors block">لصناع المحتوى</a></li>
-                                  <li><a href="#" className="hover:text-cyan-600 transition-colors block">سياسة الشحن والتوصيل</a></li>
-                                  <li><a href="#" className="hover:text-cyan-600 transition-colors block">الشروط والاحكام</a></li>
-                                  <li><a href="#" className="hover:text-cyan-600 transition-colors block">الارجاع والاستبدال والالغاء</a></li>
-                              </>
-                          )}
+                          {footerLinks.slice(0, 5).map((link, index) => (
+                              <li key={index}>
+                                  <a href={link.url || '#'} target={link.url?.startsWith('http') ? '_blank' : '_self'} rel="noopener noreferrer" className="hover:text-cyan-600 transition-colors block">
+                                      {link.label || `رابط ${index + 1}`}
+                                  </a>
+                              </li>
+                          ))}
                       </ul>
                   </div>
+                  )}
   
                   {/* Col 3: More Links (Center Left - 3 cols) - باقي الروابط */}
                   <div className="lg:col-span-3 lg:pt-[52px]"> {/* Padding to align with the list above */}
@@ -143,21 +136,26 @@ const Footer = ({ logo, socialLinks, footerSettings }) => {
   
                   {/* Col 4: Contact & Tax (Left - 2 cols) */}
                   <div className="lg:col-span-2 flex flex-col items-start lg:items-start gap-8">
-                      {/* Customer Service */}
+                      {/* خدمة العملاء - تظهر فقط إذا وُجدت وسيلة تواصل واحدة على الأقل */}
+                      {(socialLinks?.whatsapp?.trim() || socialLinks?.phone?.trim() || socialLinks?.email?.trim()) && (
                       <div className="w-full text-right lg:text-right">
                           <h3 className="font-bold text-cyan-500 mb-5 text-lg">خدمة العملاء</h3>
                           <div className="flex gap-5 justify-start items-center">
-                               {socialLinks?.whatsapp && (
-                                   <a href={`https://wa.me/${socialLinks.whatsapp}`} target="_blank" rel="noreferrer" className="text-slate-900 hover:text-green-500 transition-all"><MessageCircle size={22} strokeWidth={2} /></a>
+                               {socialLinks?.whatsapp?.trim() && (
+                                   <a href={`https://wa.me/${socialLinks.whatsapp.replace(/\D/g,'')}`} target="_blank" rel="noreferrer" className="text-slate-900 hover:text-green-500 transition-all"><MessageCircle size={22} strokeWidth={2} /></a>
                                )}
-                                <a href="mailto:support@khymatoys.com" className="text-slate-900 hover:text-red-500 transition-all"><Mail size={22} strokeWidth={2} /></a>
-                               {socialLinks?.phone && (
-                                   <a href={`tel:${socialLinks.phone}`} className="text-slate-900 hover:text-blue-500 transition-all"><Phone size={22} strokeWidth={2} /></a>
+                               {socialLinks?.email?.trim() && (
+                                   <a href={`mailto:${socialLinks.email.trim()}`} className="text-slate-900 hover:text-red-500 transition-all"><Mail size={22} strokeWidth={2} /></a>
+                               )}
+                               {socialLinks?.phone?.trim() && (
+                                   <a href={`tel:${socialLinks.phone.trim()}`} className="text-slate-900 hover:text-blue-500 transition-all"><Phone size={22} strokeWidth={2} /></a>
                                )}
                           </div>
                       </div>
+                      )}
 
-                      {/* Tax ID */}
+                      {/* Tax ID - يظهر فقط إذا تم إدخال الرقم الضريبي */}
+                      {taxId.trim() && (
                       <div className="w-full text-right lg:text-right mt-2">
                           <h3 className="font-bold text-slate-800 mb-1 text-sm">الرقم الضريبي</h3>
                           <p className="font-mono text-slate-600 text-sm mb-2">{taxId}</p>
@@ -166,6 +164,7 @@ const Footer = ({ logo, socialLinks, footerSettings }) => {
                              {logo ? <img src={logo} className="w-full h-full object-contain grayscale" alt="Tax Logo" /> : <Gift size={24} className="text-slate-400"/>}
                           </div>
                       </div>
+                      )}
                   </div>
               </div>
           </div>
@@ -173,8 +172,9 @@ const Footer = ({ logo, socialLinks, footerSettings }) => {
           {/* Bottom Section */}
           <div className="border-t border-slate-100 py-6 bg-white">
               <div className="max-w-[1400px] mx-auto px-4 md:px-8 flex flex-col-reverse md:flex-row justify-between items-center gap-6 text-xs font-medium text-slate-500">
-                  {/* Business Platform (Left) */}
-                  <div className="flex items-center gap-2 w-full md:w-auto justify-center md:justify-end">
+                  {/* منصة الأعمال - يظهر فقط إذا تم إدخال الرقم من لوحة التحكم */}
+                  {businessPlatformId && (
+                  <a href={`https://eauthenticate.saudibusiness.gov.sa/certificate-details/${encodeURIComponent(businessPlatformId.trim())}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 w-full md:w-auto justify-center md:justify-end hover:opacity-90 transition-opacity">
                     <div className="flex items-center">
                         <svg xmlns="http://www.w3.org/2000/svg" width="33" height="32" viewBox="0 0 33 32" fill="none">
                           <path fillRule="evenodd" clipRule="evenodd" d="M27.8907 19.4494C27.7256 19.752 27.3679 19.8895 27.0378 19.7795C26.405 19.5869 25.7998 19.3943 25.1945 19.2293C24.5893 19.0367 23.9565 18.8716 23.3513 18.7341C22.1132 18.4314 20.8752 18.1288 19.6372 17.9087C19.0595 17.7987 18.6468 17.2484 18.7568 16.6432C18.7843 16.5331 18.8119 16.4231 18.8669 16.3131C19.4721 15.2126 20.1324 14.2222 20.8202 13.2593C21.508 12.2964 22.2508 11.361 23.0486 10.4806C23.3237 10.178 23.7914 10.1505 24.0941 10.4256C24.3417 10.6457 24.3967 11.0308 24.2591 11.306C23.7089 12.3514 23.1312 13.3418 22.5259 14.3597L21.6455 15.8454C21.618 15.9004 21.563 15.9829 21.5355 16.0379C22.3608 16.2305 23.1587 16.4781 23.9565 16.7532C24.5893 16.9733 25.222 17.2209 25.8273 17.496C26.4325 17.7712 27.0653 18.0738 27.6431 18.4039C27.9732 18.6515 28.1107 19.0917 27.8907 19.4494Z" fill="#59529F"/>
@@ -189,7 +189,8 @@ const Footer = ({ logo, socialLinks, footerSettings }) => {
                         </svg>
                     </div>
                     <span className="text-slate-600">موثق في منصة الأعمال</span>
-                  </div>
+                  </a>
+                  )}
 
                   {/* Payment Icons (Center) */}
                   <div className="flex items-center gap-2 flex-wrap justify-center w-full md:w-auto">
@@ -293,7 +294,9 @@ const LuckyWheel = () => {
           twitter: '',
           snapchat: '',
           whatsapp: '',
-          website: ''
+          website: '',
+          email: '',
+          phone: ''
         },
         backgroundSettings: savedBackgroundSettings ? JSON.parse(savedBackgroundSettings) : {
           type: 'color',
@@ -304,9 +307,10 @@ const LuckyWheel = () => {
         winSound: savedWinSound || "https://www.soundjay.com/human/sounds/applause-01.mp3",
         loseSound: savedLoseSound || "https://www.soundjay.com/misc/sounds/fail-trombone-01.mp3",
         footerSettings: savedFooterSettings ? JSON.parse(savedFooterSettings) : {
-          description: 'مرحبا بكم في خيمة الالعاب .. أسعد مكان يتجول فيه الصغار والكبار متخصص في بيع المنتجات الترفيهية هنا نصنع البهجة',
+          description: '',
           links: [],
-          taxId: '300155258800003'
+          taxId: '',
+          businessPlatformId: ''
         },
         enableDevToolsProtection: savedEnableDevToolsProtection !== null ? savedEnableDevToolsProtection === 'true' : true,
         wheelStyle: savedWheelStyle || 'classic'
@@ -484,14 +488,30 @@ const LuckyWheel = () => {
     twitter: '',
     snapchat: '',
     whatsapp: '',
-    website: ''
+    website: '',
+    email: '',
+    phone: ''
   });
+
+  // تحديث favicon بناءً على اللوجو المدخل
+  useEffect(() => {
+    if (storeLogo) {
+      let link = document.querySelector("link[rel='icon']") || document.createElement('link');
+      link.rel = 'icon';
+      link.type = 'image/png';
+      link.href = storeLogo;
+      if (!link.parentNode) {
+        document.head.appendChild(link);
+      }
+    }
+  }, [storeLogo]);
 
   // إعدادات الفوتر
   const [footerSettings, setFooterSettings] = useState(loadedSettings?.footerSettings || {
-    description: 'مرحبا بكم في خيمة الالعاب .. أسعد مكان يتجول فيه الصغار والكبار متخصص في بيع المنتجات الترفيهية هنا نصنع البهجة',
+    description: '',
     links: [],
-    taxId: '300155258800003'
+    taxId: '',
+    businessPlatformId: ''
   });
 
   const [isSpinning, setIsSpinning] = useState(false);
@@ -721,12 +741,15 @@ const LuckyWheel = () => {
             twitter: '',
             snapchat: '',
             whatsapp: '',
-            website: ''
+            website: '',
+            email: '',
+            phone: ''
           });
           const loadedFooterSettings = cloudSettings.footerSettings || {
-            description: 'مرحبا بكم في خيمة الالعاب .. أسعد مكان يتجول فيه الصغار والكبار متخصص في بيع المنتجات الترفيهية هنا نصنع البهجة',
+            description: '',
             links: [],
-            taxId: '300155258800003'
+            taxId: '',
+            businessPlatformId: ''
           };
           setFooterSettings(loadedFooterSettings);
           console.log('✅ تم تحميل إعدادات الفوتر من السحابة:', {
@@ -776,9 +799,10 @@ const LuckyWheel = () => {
           }
           localStorage.setItem('socialLinks', JSON.stringify(cloudSettings.socialLinks || {}));
           localStorage.setItem('footerSettings', JSON.stringify(cloudSettings.footerSettings || {
-            description: 'مرحبا بكم في خيمة الالعاب .. أسعد مكان يتجول فيه الصغار والكبار متخصص في بيع المنتجات الترفيهية هنا نصنع البهجة',
+            description: '',
             links: [],
-            taxId: '300155258800003'
+            taxId: '',
+            businessPlatformId: ''
           }));
           localStorage.setItem('backgroundSettings', JSON.stringify(cloudSettings.backgroundSettings || {}));
           localStorage.setItem('winSound', cloudSettings.winSound || "");
@@ -802,12 +826,15 @@ const LuckyWheel = () => {
               twitter: '',
               snapchat: '',
               whatsapp: '',
-              website: ''
+              website: '',
+              email: '',
+              phone: ''
             });
             setFooterSettings(localData.footerSettings || {
-              description: 'مرحبا بكم في خيمة الالعاب .. أسعد مكان يتجول فيه الصغار والكبار متخصص في بيع المنتجات الترفيهية هنا نصنع البهجة',
+              description: '',
               links: [],
-              taxId: '300155258800003'
+              taxId: '',
+              businessPlatformId: ''
             });
             setBackgroundSettings(localData.backgroundSettings || {
               type: 'color',
@@ -838,9 +865,10 @@ const LuckyWheel = () => {
           setStoreLogo(localData.logo || null);
           setSocialLinks(localData.socialLinks || {});
           setFooterSettings(localData.footerSettings || {
-            description: 'مرحبا بكم في خيمة الالعاب .. أسعد مكان يتجول فيه الصغار والكبار متخصص في بيع المنتجات الترفيهية هنا نصنع البهجة',
+            description: '',
             links: [],
-            taxId: '300155258800003'
+            taxId: '',
+            businessPlatformId: ''
           });
           setBackgroundSettings(localData.backgroundSettings || {});
           setWinSound(localData.winSound || "");
@@ -2009,6 +2037,14 @@ const LuckyWheel = () => {
                                           <Globe className="text-slate-500" />
                                           <input type="text" placeholder="رابط الموقع الإلكتروني" className="flex-1 p-2 border rounded-lg text-sm" value={tempSocialLinks.website} onChange={e => setTempSocialLinks({...tempSocialLinks, website: e.target.value})} />
                                       </div>
+                                      <div className="flex items-center gap-2">
+                                          <Mail className="text-red-500" />
+                                          <input type="email" placeholder="البريد الإلكتروني (خدمة العملاء في الفوتر)" className="flex-1 p-2 border rounded-lg text-sm" value={tempSocialLinks.email || ''} onChange={e => setTempSocialLinks({...tempSocialLinks, email: e.target.value})} />
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                          <Phone className="text-blue-500" />
+                                          <input type="text" placeholder="رقم الهاتف (خدمة العملاء في الفوتر)" className="flex-1 p-2 border rounded-lg text-sm" value={tempSocialLinks.phone || ''} onChange={e => setTempSocialLinks({...tempSocialLinks, phone: e.target.value})} />
+                                      </div>
                                   </div>
                               </div>
 
@@ -2035,10 +2071,23 @@ const LuckyWheel = () => {
                                           type="text" 
                                           value={tempFooterSettings.taxId || ''}
                                           onChange={(e) => setTempFooterSettings({...tempFooterSettings, taxId: e.target.value})}
-                                          placeholder="300155258800003"
+                                          placeholder="أدخل الرقم الضريبي"
                                           className="w-full p-3 border-2 border-slate-200 rounded-lg text-sm font-mono focus:border-cyan-500 outline-none"
                                           dir="ltr"
                                       />
+                                  </div>
+
+                                  <div className="mb-6">
+                                      <label className="block text-sm font-bold text-slate-700 mb-2">رقم منصة الأعمال</label>
+                                      <input 
+                                          type="text" 
+                                          value={tempFooterSettings.businessPlatformId || ''}
+                                          onChange={(e) => setTempFooterSettings({...tempFooterSettings, businessPlatformId: e.target.value})}
+                                          placeholder="أدخل الرقم لعرض لوجو منصة الأعمال وجملة موثق في منصة الأعمال"
+                                          className="w-full p-3 border-2 border-slate-200 rounded-lg text-sm font-mono focus:border-cyan-500 outline-none"
+                                          dir="ltr"
+                                      />
+                                      <p className="text-xs text-slate-500 mt-1">إذا تركت الحقل فارغاً لن يظهر لوجو منصة الأعمال ولا جملة &quot;موثق في منصة الأعمال&quot; في الفوتر</p>
                                   </div>
 
                                   {/* روابط الفوتر */}
@@ -2343,7 +2392,7 @@ const LuckyWheel = () => {
         <div className="flex-1 w-full max-w-md bg-white text-slate-800 p-6 rounded-3xl shadow-[0_10px_40px_rgba(0,0,0,0.3)] border-4 border-slate-200">
           <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-100">
             <h2 className="text-xl font-black flex items-center gap-2 text-slate-800"><ShoppingBag className="text-red-500" /> الجوائز المكتسبة</h2>
-            <button onClick={resetGame} className={`text-xs flex items-center gap-1 transition-all px-3 py-1.5 rounded-full font-bold uppercase ${remainingSpins <= 0 || availableIds.length === 0 ? 'bg-red-600 text-white animate-pulse' : 'bg-slate-100 text-slate-500 hover:text-white hover:bg-red-500'}`}><RefreshCw size={14} /> إعادة اللعبة</button>
+            {/* <button onClick={resetGame} className={`text-xs flex items-center gap-1 transition-all px-3 py-1.5 rounded-full font-bold uppercase ${remainingSpins <= 0 || availableIds.length === 0 ? 'bg-red-600 text-white animate-pulse' : 'bg-slate-100 text-slate-500 hover:text-white hover:bg-red-500'}`}><RefreshCw size={14} /> إعادة اللعبة</button> */}
           </div>
 
           <div className="space-y-3 min-h-[200px] pr-2">
@@ -2365,7 +2414,7 @@ const LuckyWheel = () => {
           {/* Progress Bar */}
           <div className="mt-6">
              <div className="flex justify-between text-xs text-slate-400 mb-1 font-bold uppercase">
-               <span>المحاولات المتبقية</span>
+               <span>عدد المحاولات  المتاحة</span>
                <span className={`text-lg font-black ${remainingSpins === 0 ? 'text-red-500' : 'text-slate-800'}`}>{remainingSpins}</span>
              </div>
              <div className="h-4 w-full bg-slate-200 rounded-full overflow-hidden border border-slate-300">
