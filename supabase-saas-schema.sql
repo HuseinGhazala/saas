@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   slug TEXT NOT NULL UNIQUE,
   store_name TEXT NOT NULL DEFAULT 'متجري',
+  plan TEXT NOT NULL DEFAULT 'free',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );

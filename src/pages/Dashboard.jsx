@@ -23,5 +23,5 @@ export default function Dashboard() {
 
   if (!user) return null
 
-  return <LuckyWheel ownerId={user.id} ownerSlug={profile?.slug} />
+  return <LuckyWheel ownerId={user.id} ownerSlug={profile?.slug} ownerPlan={profile?.plan} />
 }

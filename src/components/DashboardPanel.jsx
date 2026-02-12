@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { XCircle, Lock, Edit3, Save, Plus, Trash2, Upload, Hash, RotateCw, Palette, Monitor, Smartphone, Music, Play, Database, Link as LinkIcon, CheckCircle, AlertCircle, Share2, Facebook, Instagram, Twitter, Ghost, MessageCircle, Globe, Mail, Phone, List, Ticket, Scale, Image as ImageIcon, Copy } from 'lucide-react';
+import { XCircle, Lock, Edit3, Save, Plus, Trash2, Upload, Hash, RotateCw, Palette, Monitor, Smartphone, Music, Play, Database, Link as LinkIcon, CheckCircle, AlertCircle, Share2, Facebook, Instagram, Twitter, Ghost, MessageCircle, Globe, Mail, Phone, List, Ticket, Scale, Image as ImageIcon, Copy, Crown } from 'lucide-react';
+import { getPlanInfo, PLANS, PLAN_IDS } from '../lib/plans';
 
 export default function DashboardPanel(props) {
   const {
@@ -10,7 +11,7 @@ export default function DashboardPanel(props) {
     tempSocialLinks, setTempSocialLinks, tempFooterSettings, setTempFooterSettings,
     editingCouponsId, setEditingCouponsId, couponInput, setCouponInput, onSaveCoupons,
     tempSegments, handleSegmentChange, handleAddSegment, handleDeleteSegment, openCouponManager,
-    ownerSlug
+    ownerSlug, currentPlan, currentSegmentsCount
   } = props;
   const [linkCopied, setLinkCopied] = useState(false);
   const publicUrl = ownerSlug ? `${typeof window !== 'undefined' ? window.location.origin : ''}/w/${ownerSlug}` : '';
@@ -59,7 +60,47 @@ export default function DashboardPanel(props) {
                           </div>
 
                           <div className="flex-1 overflow-y-auto p-6 bg-slate-100 relative">
-                              
+                              {/* بطاقة الباقة الحالية */}
+                              {(currentPlan !== undefined && currentPlan !== null) && (
+                              <div className="bg-gradient-to-r from-slate-800 to-slate-700 text-white rounded-xl p-4 mb-6 shadow-lg border border-slate-600">
+                                  <div className="flex items-center justify-between flex-wrap gap-3">
+                                      <div className="flex items-center gap-2">
+                                          <Crown size={22} className="text-amber-400" />
+                                          <span className="font-bold text-lg">باقتك: {getPlanInfo(currentPlan).nameAr}</span>
+                                      </div>
+                                      <div className="text-sm text-slate-300">
+                                          القطاعات: <span className="font-bold text-white">{currentSegmentsCount ?? tempSegments?.length ?? 0}</span>
+                                          {' / '}
+                                          <span className={((currentSegmentsCount ?? tempSegments?.length ?? 0) >= getPlanInfo(currentPlan).maxSegments ? 'text-amber-300' : '')}>
+                                            {getPlanInfo(currentPlan).maxSegments === 999 ? '∞' : getPlanInfo(currentPlan).maxSegments}
+                                          </span>
+                                      </div>
+                                  </div>
+                                  <p className="text-xs text-slate-400 mt-2">
+                                      {getPlanInfo(currentPlan).maxSpinsPerMonth === -1
+                                        ? 'دورات شهرية غير محدودة'
+                                        : `حتى ${getPlanInfo(currentPlan).maxSpinsPerMonth} دورة/شهر`}
+                                      {currentPlan === 'free' && ' — ترقية الباقة لزيادة القطاعات والدورات.'}
+                                  </p>
+                                  <details className="mt-3">
+                                      <summary className="text-xs text-amber-300 cursor-pointer hover:text-amber-200">عرض الباقات والأسعار</summary>
+                                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-3 text-sm">
+                                          {[PLAN_IDS.FREE, PLAN_IDS.BASIC, PLAN_IDS.PRO].map((id) => {
+                                              const p = PLANS[id];
+                                              const isCurrent = id === currentPlan;
+                                              return (
+                                                  <div key={id} className={`rounded-lg p-2 border ${isCurrent ? 'bg-amber-500/20 border-amber-500' : 'bg-slate-700/50 border-slate-600'}`}>
+                                                      <div className="font-bold">{p.nameAr}</div>
+                                                      <div className="text-slate-300">{p.maxSegments === 999 ? '∞' : p.maxSegments} قطاع · {p.maxSpinsPerMonth === -1 ? '∞' : p.maxSpinsPerMonth} دورة/شهر</div>
+                                                      <div className="text-amber-300 mt-1">{p.priceMonthly === 0 ? 'مجاني' : `${p.priceMonthly} ر.س/شهر`}</div>
+                                                  </div>
+                                              );
+                                          })}
+                                      </div>
+                                  </details>
+                              </div>
+                              )}
+
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                                   {/* --- إعدادات الشعار --- */}
                                   <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">

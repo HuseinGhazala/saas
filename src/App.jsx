@@ -26,12 +26,13 @@ import {
   saveWinDataForSlug,
   updateSegmentsForSlug
 } from './lib/supabase';
+import { canAddSegment as planCanAddSegment, getPlanInfo } from './lib/plans';
 import ConfettiEffect from './components/ConfettiEffect.jsx';
 import Footer from './components/Footer.jsx';
 import RegistrationModal from './components/RegistrationModal.jsx';
 import WinnerModal from './components/WinnerModal.jsx';
 import DashboardPanel from './components/DashboardPanel.jsx';
-const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null }) => {
+const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan = 'free' }) => {
   const apiKey = ""; 
 
   // لا يوجد رابط افتراضي - يجب إدخاله من لوحة التحكم 
@@ -1196,6 +1197,11 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null }) => {
   };
 
   const handleAddSegment = () => {
+      if (ownerId && !planCanAddSegment(ownerPlan, tempSegments.length)) {
+          const planInfo = getPlanInfo(ownerPlan);
+          alert(`وصلت للحد الأقصى لقطاعات باقتك (${planInfo.maxSegments} قطاع). ترقية الباقة من لوحة التحكم لزيادة العدد.`);
+          return;
+      }
       const newId = tempSegments.length > 0 ? Math.max(...tempSegments.map(s => s.id)) + 1 : 1;
       setTempSegments([...tempSegments, { id: newId, text: "جائزة جديدة", value: "NEW", color: "#3B82F6", type: "prize", weight: 10, couponCodes: [] }]);
   };
@@ -1561,6 +1567,8 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null }) => {
         handleDeleteSegment={handleDeleteSegment}
         openCouponManager={openCouponManager}
         ownerSlug={ownerSlug}
+        currentPlan={ownerPlan}
+        currentSegmentsCount={tempSegments.length}
       />
 
       <RegistrationModal
