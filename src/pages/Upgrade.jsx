@@ -24,7 +24,7 @@ function openPayment(planId) {
     window.open(`https://wa.me/${wa}?text=${msg}`, '_blank')
     return
   }
-  toast.error('لم يتم إعداد رابط الدفع أو رقم واتساب للترقية. تواصل مع إدارة الموقع.')
+  toast.error('لم يتم إعداد رقم واتساب أو رابط الدفع بعد. أضف VITE_WHATSAPP_UPGRADE في ملف .env ثم أعد بناء المشروع (npm run build).')
 }
 
 export default function Upgrade() {
