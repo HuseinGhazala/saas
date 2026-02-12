@@ -25,7 +25,6 @@ const Footer = ({ logo, socialLinks, footerSettings }) => {
                          ) : (
                              <div className="flex flex-col items-center mb-2">
                                  <Gift className="text-cyan-500 w-12 h-12 mb-1" />
-                                 <h2 className="text-xl font-bold text-cyan-500">خيمة الألعاب</h2>
                              </div>
                          )}
                      </div>
