@@ -19,7 +19,12 @@ export default function Signup() {
       await signUp(email, password, { store_name: storeName || 'متجري' })
       navigate('/app', { replace: true })
     } catch (err) {
-      setError(err.message || 'فشل إنشاء الحساب')
+      const msg = (err?.message || '').toLowerCase()
+      if (msg.includes('rate limit') || msg.includes('rate_limit') || msg.includes('email rate limit')) {
+        setError('تم تجاوز الحد المسموح من طلبات التسجيل حالياً. يرجى المحاولة بعد ٣٠–٦٠ دقيقة أو التواصل معنا.')
+      } else {
+        setError(err.message || 'فشل إنشاء الحساب')
+      }
     } finally {
       setLoading(false)
     }

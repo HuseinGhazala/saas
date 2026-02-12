@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { XCircle, Lock, Edit3, Save, Plus, Trash2, Upload, Hash, RotateCw, Palette, Monitor, Smartphone, Music, Play, Database, Link as LinkIcon, CheckCircle, AlertCircle, Share2, Facebook, Instagram, Twitter, Ghost, MessageCircle, Globe, Mail, Phone, List, Ticket, Scale, Image as ImageIcon, Copy, Crown } from 'lucide-react';
 import { getPlanInfo, PLANS, PLAN_IDS } from '../lib/plans';
 
@@ -80,8 +81,13 @@ export default function DashboardPanel(props) {
                                       {getPlanInfo(currentPlan).maxSpinsPerMonth === -1
                                         ? 'دورات شهرية غير محدودة'
                                         : `حتى ${getPlanInfo(currentPlan).maxSpinsPerMonth} دورة/شهر`}
-                                      {currentPlan === 'free' && ' — ترقية الباقة لزيادة القطاعات والدورات.'}
+                                      {currentPlan === 'free' && (
+                                        <> ترقية الباقة لزيادة القطاعات والدورات — <Link to="/app/upgrade" className="text-amber-300 hover:text-amber-200 underline">ترقية الآن</Link></>
+                                      )}
                                   </p>
+                                  <Link to="/app/upgrade" className="inline-flex items-center gap-1 mt-2 text-sm text-amber-400 hover:text-amber-300 font-medium">
+                                      <Crown size={14} /> ترقية الباقة والدفع
+                                  </Link>
                                   <details className="mt-3">
                                       <summary className="text-xs text-amber-300 cursor-pointer hover:text-amber-200">عرض الباقات والأسعار</summary>
                                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-3 text-sm">
