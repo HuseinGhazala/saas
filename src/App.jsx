@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   RotateCw, RefreshCw, ShoppingBag, XCircle, Gift, Sparkles, Loader2, Star, 
   Volume2, VolumeX, User, Mail, Phone, Lock, CheckCircle, AlertCircle, 
@@ -35,6 +36,7 @@ import DashboardPanel from './components/DashboardPanel.jsx';
 import toast from 'react-hot-toast';
 
 const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan = 'free' }) => {
+  const navigate = useNavigate();
   const apiKey = ""; 
 
   // لا يوجد رابط افتراضي - يجب إدخاله من لوحة التحكم 
@@ -1201,7 +1203,21 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan =
   const handleAddSegment = () => {
       if (ownerId && !planCanAddSegment(ownerPlan, tempSegments.length)) {
           const planInfo = getPlanInfo(ownerPlan);
-          toast.error(`وصلت للحد الأقصى لقطاعات باقتك (${planInfo.maxSegments} قطاع). ترقية الباقة من لوحة التحكم لزيادة العدد.`);
+          toast.error(
+            (t) => (
+              <span className="flex flex-col gap-2">
+                <span>وصلت للحد الأقصى لقطاعات باقتك ({planInfo.maxSegments} قطاع).</span>
+                <button
+                  type="button"
+                  onClick={() => { navigate('/app/upgrade'); toast.dismiss(t.id); }}
+                  className="text-sm font-bold text-amber-300 hover:text-amber-200 underline text-right"
+                >
+                  ترقية الباقة الآن ←
+                </button>
+              </span>
+            ),
+            { duration: 6000 }
+          );
           return;
       }
       const newId = tempSegments.length > 0 ? Math.max(...tempSegments.map(s => s.id)) + 1 : 1;

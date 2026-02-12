@@ -45,7 +45,7 @@ export default function DashboardPanel(props) {
                                   <h2 className="text-2xl font-black flex items-center gap-2 text-slate-800"><Edit3 className="text-blue-600" /> إعدادات العجلة</h2>
                                   <p className="text-sm text-slate-500">التحكم الكامل في مظهر ووظائف العجلة</p>
                               </div>
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 flex-wrap">
                                   {ownerSlug && (
                                     <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
                                       <Share2 size={18} className="text-amber-600" />
@@ -55,6 +55,11 @@ export default function DashboardPanel(props) {
                                       </button>
                                       {linkCopied && <span className="text-xs text-green-600 font-bold">تم النسخ!</span>}
                                     </div>
+                                  )}
+                                  {(currentPlan === 'free' || currentPlan === 'basic') && (
+                                    <Link to="/app/upgrade" className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-bold bg-amber-500 hover:bg-amber-400 text-slate-900 transition-transform hover:scale-105 shadow-md">
+                                      <Crown size={18} /> ترقية الباقة
+                                    </Link>
                                   )}
                                   <button onClick={onSave} className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-bold flex items-center gap-2 shadow-lg transition-transform hover:scale-105"><Save size={18} /> حفظ التغييرات</button>
                               </div>
@@ -81,13 +86,13 @@ export default function DashboardPanel(props) {
                                       {getPlanInfo(currentPlan).maxSpinsPerMonth === -1
                                         ? 'دورات شهرية غير محدودة'
                                         : `حتى ${getPlanInfo(currentPlan).maxSpinsPerMonth} دورة/شهر`}
-                                      {currentPlan === 'free' && (
-                                        <> ترقية الباقة لزيادة القطاعات والدورات — <Link to="/app/upgrade" className="text-amber-300 hover:text-amber-200 underline">ترقية الآن</Link></>
-                                      )}
+                                      {(currentPlan === 'free' || currentPlan === 'basic') && ' — ترقية الباقة لزيادة القطاعات والدورات.'}
                                   </p>
-                                  <Link to="/app/upgrade" className="inline-flex items-center gap-1 mt-2 text-sm text-amber-400 hover:text-amber-300 font-medium">
-                                      <Crown size={14} /> ترقية الباقة والدفع
-                                  </Link>
+                                  {(currentPlan === 'free' || currentPlan === 'basic') && (
+                                    <Link to="/app/upgrade" className="inline-flex items-center gap-2 mt-3 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold text-sm transition-colors shadow-md">
+                                      <Crown size={16} /> ترقية الباقة والدفع
+                                    </Link>
+                                  )}
                                   <details className="mt-3">
                                       <summary className="text-xs text-amber-300 cursor-pointer hover:text-amber-200">عرض الباقات والأسعار</summary>
                                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-3 text-sm">
