@@ -1,0 +1,9 @@
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+  # لا تعيد كتابة الملفات أو المجلدات الموجودة فعلياً
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  # إرسال كل المسارات إلى index.html (لتطبيق SPA)
+  RewriteRule . /index.html [L]
+</IfModule>
