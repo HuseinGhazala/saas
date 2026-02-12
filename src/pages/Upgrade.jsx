@@ -1,5 +1,6 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
+import toast from 'react-hot-toast'
 import { Crown, Check, ArrowRight } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { PLANS, PLAN_IDS, getPlanInfo } from '../lib/plans'
@@ -23,7 +24,7 @@ function openPayment(planId) {
     window.open(`https://wa.me/${wa}?text=${msg}`, '_blank')
     return
   }
-  alert('لم يتم إعداد رابط الدفع أو رقم واتساب للترقية. تواصل مع إدارة الموقع.')
+  toast.error('لم يتم إعداد رابط الدفع أو رقم واتساب للترقية. تواصل مع إدارة الموقع.')
 }
 
 export default function Upgrade() {

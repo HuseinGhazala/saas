@@ -1,5 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
+import { Toaster } from 'react-hot-toast'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import AppLayout from './components/AppLayout'
@@ -12,6 +13,17 @@ import PublicWheel from './pages/PublicWheel'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
+    <Toaster
+      position="top-center"
+      reverseOrder={false}
+      gutter={8}
+      toastOptions={{
+        duration: 4000,
+        style: { direction: 'rtl', fontFamily: "'IBM Plex Sans Arabic', sans-serif" },
+        success: { iconTheme: { primary: '#10b981' } },
+        error: { iconTheme: { primary: '#ef4444' } }
+      }}
+    />
     <AuthProvider>
       <BrowserRouter>
         <Routes>

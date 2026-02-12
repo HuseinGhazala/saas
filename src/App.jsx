@@ -32,6 +32,8 @@ import Footer from './components/Footer.jsx';
 import RegistrationModal from './components/RegistrationModal.jsx';
 import WinnerModal from './components/WinnerModal.jsx';
 import DashboardPanel from './components/DashboardPanel.jsx';
+import toast from 'react-hot-toast';
+
 const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan = 'free' }) => {
   const apiKey = ""; 
 
@@ -1157,7 +1159,7 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan =
             setTimeout(() => { spinWheel(true); }, 500);
         } catch (error) {
             console.error("Error sending data:", error);
-            alert("حدث خطأ في الاتصال، يرجى التأكد من الإعدادات والمحاولة مرة أخرى.");
+            toast.error("حدث خطأ في الاتصال، يرجى التأكد من الإعدادات والمحاولة مرة أخرى.");
         } finally {
             setIsSubmitting(false);
         }
@@ -1186,7 +1188,7 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan =
       if (dashboardPassword === 'adminnn') {
           setIsDashboardUnlocked(true);
       } else {
-          alert('كلمة المرور غير صحيحة');
+          toast.error('كلمة المرور غير صحيحة');
       }
   };
 
@@ -1199,7 +1201,7 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan =
   const handleAddSegment = () => {
       if (ownerId && !planCanAddSegment(ownerPlan, tempSegments.length)) {
           const planInfo = getPlanInfo(ownerPlan);
-          alert(`وصلت للحد الأقصى لقطاعات باقتك (${planInfo.maxSegments} قطاع). ترقية الباقة من لوحة التحكم لزيادة العدد.`);
+          toast.error(`وصلت للحد الأقصى لقطاعات باقتك (${planInfo.maxSegments} قطاع). ترقية الباقة من لوحة التحكم لزيادة العدد.`);
           return;
       }
       const newId = tempSegments.length > 0 ? Math.max(...tempSegments.map(s => s.id)) + 1 : 1;
@@ -1208,7 +1210,7 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan =
 
   const handleDeleteSegment = (id) => {
       if (tempSegments.length <= 2) {
-          alert("يجب أن تحتوي العجلة على قطاعين على الأقل!");
+          toast.error("يجب أن تحتوي العجلة على قطاعين على الأقل!");
           return;
       }
       setTempSegments(tempSegments.filter(s => s.id !== id));
@@ -1238,7 +1240,7 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan =
       const file = e.target.files[0];
       if (file) {
           if (file.size > 2000000) { 
-             alert("حجم الصورة كبير جداً، يرجى اختيار صورة أقل من 2 ميجابايت");
+             toast.error("حجم الصورة كبير جداً، يرجى اختيار صورة أقل من 2 ميجابايت");
              return;
           }
           const reader = new FileReader();
@@ -1254,7 +1256,7 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan =
       const file = e.target.files[0];
       if (file) {
           if (file.size > 3000000) { 
-             alert("حجم الصورة كبير جداً، يرجى اختيار صورة أقل من 3 ميجابايت");
+             toast.error("حجم الصورة كبير جداً، يرجى اختيار صورة أقل من 3 ميجابايت");
              return;
           }
           const reader = new FileReader();
@@ -1273,7 +1275,7 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan =
       const file = e.target.files[0];
       if (file) {
           if (file.size > 3000000) { 
-             alert("حجم الملف الصوتي كبير جداً (الحد الأقصى 3 ميجابايت)");
+             toast.error("حجم الملف الصوتي كبير جداً (الحد الأقصى 3 ميجابايت)");
              return;
           }
           const reader = new FileReader();
@@ -1288,7 +1290,7 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan =
   // --- دالة معاينة الصوت ---
   const playPreview = (url) => {
       if (!url) {
-        alert("لا يوجد ملف صوتي للمعاينة.");
+        toast.error("لا يوجد ملف صوتي للمعاينة.");
         return;
       }
 
@@ -1302,7 +1304,7 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan =
       
       audio.onerror = (e) => {
         console.error("Audio error:", e);
-        alert("تعذر تشغيل الملف الصوتي. يرجى التأكد من الصيغة.");
+        toast.error("تعذر تشغيل الملف الصوتي. يرجى التأكد من الصيغة.");
       };
 
       const playPromise = audio.play();
@@ -1311,7 +1313,7 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan =
               if (error.name !== 'AbortError' && error.name !== 'NotSupportedError') {
                   console.error("Preview play failed", error);
               } else if (error.name === 'NotSupportedError') {
-                  alert("صيغة الملف غير مدعومة في هذا المتصفح.");
+                  toast.error("صيغة الملف غير مدعومة في هذا المتصفح.");
               }
           });
       }
@@ -1389,11 +1391,11 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan =
       // إشعار المستخدم أن البيانات تم حفظها
       if (saved) {
         const footerInfo = tempFooterSettings.links?.length > 0 
-          ? `\n\n📌 تم حفظ ${tempFooterSettings.links.length} رابط مهم في الفوتر` 
+          ? ` تم حفظ ${tempFooterSettings.links.length} رابط مهم في الفوتر.` 
           : '';
-        alert(`✅ تم حفظ الإعدادات بنجاح في السحابة! جميع المستخدمين سيرون نفس البيانات.${footerInfo}`);
+        toast.success(`تم حفظ الإعدادات بنجاح في السحابة! جميع المستخدمين سيرون نفس البيانات.${footerInfo}`);
       } else {
-        alert('⚠️ تم حفظ الإعدادات محلياً، لكن حدث خطأ في الحفظ السحابي. يرجى المحاولة مرة أخرى.');
+        toast.error('تم حفظ الإعدادات محلياً، لكن حدث خطأ في الحفظ السحابي. يرجى المحاولة مرة أخرى.');
       }
   };
 
