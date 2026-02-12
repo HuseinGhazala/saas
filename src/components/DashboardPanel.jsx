@@ -1,5 +1,5 @@
-import React from 'react';
-import { XCircle, Lock, Edit3, Save, Plus, Trash2, Upload, Hash, RotateCw, Palette, Monitor, Smartphone, Music, Play, Database, Link as LinkIcon, CheckCircle, AlertCircle, Share2, Facebook, Instagram, Twitter, Ghost, MessageCircle, Globe, Mail, Phone, List, Ticket, Scale, Image as ImageIcon } from 'lucide-react';
+import React, { useState } from 'react';
+import { XCircle, Lock, Edit3, Save, Plus, Trash2, Upload, Hash, RotateCw, Palette, Monitor, Smartphone, Music, Play, Database, Link as LinkIcon, CheckCircle, AlertCircle, Share2, Facebook, Instagram, Twitter, Ghost, MessageCircle, Globe, Mail, Phone, List, Ticket, Scale, Image as ImageIcon, Copy } from 'lucide-react';
 
 export default function DashboardPanel(props) {
   const {
@@ -9,8 +9,18 @@ export default function DashboardPanel(props) {
     tempGoogleScriptUrl, setTempGoogleScriptUrl, tempEnableDevToolsProtection, setTempEnableDevToolsProtection,
     tempSocialLinks, setTempSocialLinks, tempFooterSettings, setTempFooterSettings,
     editingCouponsId, setEditingCouponsId, couponInput, setCouponInput, onSaveCoupons,
-    tempSegments, handleSegmentChange, handleAddSegment, handleDeleteSegment, openCouponManager
+    tempSegments, handleSegmentChange, handleAddSegment, handleDeleteSegment, openCouponManager,
+    ownerSlug
   } = props;
+  const [linkCopied, setLinkCopied] = useState(false);
+  const publicUrl = ownerSlug ? `${typeof window !== 'undefined' ? window.location.origin : ''}/w/${ownerSlug}` : '';
+  const copyPublicLink = () => {
+    if (publicUrl) {
+      navigator.clipboard.writeText(publicUrl);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    }
+  };
   if (!show) return null;
   return (          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/95 backdrop-blur-md animate-fade-in">
               <div className="bg-white text-slate-900 rounded-2xl w-full max-w-5xl h-[90vh] flex flex-col shadow-2xl relative overflow-hidden">
@@ -28,12 +38,24 @@ export default function DashboardPanel(props) {
                       </div>
                   ) : (
                       <div className="flex flex-col h-full">
-                          <div className="p-6 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
+                          <div className="p-6 border-b border-slate-200 bg-slate-50 flex flex-wrap justify-between items-center gap-4">
                               <div>
                                   <h2 className="text-2xl font-black flex items-center gap-2 text-slate-800"><Edit3 className="text-blue-600" /> إعدادات العجلة</h2>
                                   <p className="text-sm text-slate-500">التحكم الكامل في مظهر ووظائف العجلة</p>
                               </div>
-                              <button onClick={onSave} className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-bold flex items-center gap-2 shadow-lg transition-transform hover:scale-105"><Save size={18} /> حفظ التغييرات</button>
+                              <div className="flex items-center gap-2">
+                                  {ownerSlug && (
+                                    <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                                      <Share2 size={18} className="text-amber-600" />
+                                      <span className="text-xs text-slate-600 max-w-[180px] truncate" title={publicUrl}>{publicUrl}</span>
+                                      <button type="button" onClick={copyPublicLink} className="p-1.5 rounded hover:bg-amber-100 text-amber-700" title="نسخ الرابط">
+                                        <Copy size={16} />
+                                      </button>
+                                      {linkCopied && <span className="text-xs text-green-600 font-bold">تم النسخ!</span>}
+                                    </div>
+                                  )}
+                                  <button onClick={onSave} className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-bold flex items-center gap-2 shadow-lg transition-transform hover:scale-105"><Save size={18} /> حفظ التغييرات</button>
+                              </div>
                           </div>
 
                           <div className="flex-1 overflow-y-auto p-6 bg-slate-100 relative">

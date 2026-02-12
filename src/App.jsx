@@ -16,13 +16,22 @@ import {
   FaGlobe
 } from 'react-icons/fa6';
 import { FaSnapchatGhost } from 'react-icons/fa';
-import { getSettings as getSupabaseSettings, saveSettings as saveSupabaseSettings, saveUserData as saveSupabaseUserData, saveWinData as saveSupabaseWinData } from './lib/supabase';
+import {
+  getSettings as getSupabaseSettings,
+  saveSettings as saveSupabaseSettings,
+  getWheelBySlug,
+  saveUserData as saveSupabaseUserData,
+  saveWinData as saveSupabaseWinData,
+  saveUserDataForSlug,
+  saveWinDataForSlug,
+  updateSegmentsForSlug
+} from './lib/supabase';
 import ConfettiEffect from './components/ConfettiEffect.jsx';
 import Footer from './components/Footer.jsx';
 import RegistrationModal from './components/RegistrationModal.jsx';
 import WinnerModal from './components/WinnerModal.jsx';
 import DashboardPanel from './components/DashboardPanel.jsx';
-const LuckyWheel = () => {
+const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null }) => {
   const apiKey = ""; 
 
   // لا يوجد رابط افتراضي - يجب إدخاله من لوحة التحكم 
@@ -88,20 +97,36 @@ const LuckyWheel = () => {
     }
   };
 
-  // دالة لجلب البيانات من السحابة (Supabase أو Google Sheets)
+  // دالة لجلب البيانات من السحابة (Supabase SaaS أو Google Sheets)
   const loadSettingsFromCloud = async () => {
     try {
-      // محاولة تحميل من Supabase أولاً
       const useSupabase = import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_URL !== 'YOUR_SUPABASE_URL';
       
       if (useSupabase) {
-        console.log('🔄 جاري تحميل البيانات من Supabase...');
-        const supabaseSettings = await getSupabaseSettings();
-        if (supabaseSettings) {
-          console.log('✅ تم تحميل البيانات من Supabase بنجاح!');
-          return supabaseSettings;
+        if (ownerId) {
+          console.log('🔄 جاري تحميل البيانات من Supabase (مالك)...');
+          const supabaseSettings = await getSupabaseSettings(ownerId);
+          if (supabaseSettings) {
+            console.log('✅ تم تحميل البيانات من Supabase بنجاح!');
+            return supabaseSettings;
+          }
+        } else if (slug) {
+          console.log('🔄 جاري تحميل البيانات من Supabase (رابط عام)...');
+          const supabaseSettings = await getWheelBySlug(slug);
+          if (supabaseSettings) {
+            console.log('✅ تم تحميل بيانات العجلة العامة بنجاح!');
+            return supabaseSettings;
+          }
+          return null;
+        } else {
+          console.log('🔄 جاري تحميل البيانات من Supabase...');
+          const supabaseSettings = await getSupabaseSettings();
+          if (supabaseSettings) {
+            console.log('✅ تم تحميل البيانات من Supabase بنجاح!');
+            return supabaseSettings;
+          }
+          console.warn('⚠️ لم يتم العثور على بيانات في Supabase، جاري المحاولة من Google Sheets...');
         }
-        console.warn('⚠️ لم يتم العثور على بيانات في Supabase، جاري المحاولة من Google Sheets...');
       }
       
       // إذا فشل Supabase أو لم يكن مفعّل، جرب Google Sheets فقط إذا كان الرابط موجود في Supabase
@@ -163,9 +188,9 @@ const LuckyWheel = () => {
       // حفظ في Supabase
       const useSupabase = import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_URL !== 'YOUR_SUPABASE_URL';
       
-      if (useSupabase) {
+      if (useSupabase && ownerId) {
         console.log('💾 جاري حفظ البيانات في Supabase...');
-        supabaseSaved = await saveSupabaseSettings(settings);
+        supabaseSaved = await saveSupabaseSettings(ownerId, settings);
         if (supabaseSaved) {
           console.log('✅ تم حفظ البيانات في Supabase بنجاح!');
         } else {
@@ -218,6 +243,7 @@ const LuckyWheel = () => {
   
   // --- States ---
   const [isLoadingSettings, setIsLoadingSettings] = useState(true);
+  const [wheelNotFound, setWheelNotFound] = useState(false);
   const [segments, setSegments] = useState(loadedSettings?.segments || initialSegments);
   const [availableIds, setAvailableIds] = useState((loadedSettings?.segments || initialSegments).map(s => s.id));
   
@@ -472,14 +498,19 @@ const LuckyWheel = () => {
     if(loseAudioRef.current) loseAudioRef.current.src = loseSound;
   }, [loseSound]);
 
-  // تحميل البيانات من السحابة عند تحميل الصفحة
+  // تحميل البيانات من السحابة عند تحميل الصفحة (أو عند تغيير ownerId / slug)
   useEffect(() => {
+    setWheelNotFound(false);
     const loadCloudSettings = async () => {
       setIsLoadingSettings(true);
       console.log('🚀 بدء تحميل الإعدادات من السحابة...');
       
       try {
         const cloudSettings = await loadSettingsFromCloud();
+        
+        if (slug && !cloudSettings) {
+          setWheelNotFound(true);
+        }
         
         if (cloudSettings && cloudSettings.segments) {
           console.log('✅ تم تحميل البيانات من السحابة، عدد الجوائز:', cloudSettings.segments.length);
@@ -654,7 +685,7 @@ const LuckyWheel = () => {
     };
     
     loadCloudSettings();
-  }, []); // يتم التحميل مرة واحدة عند تحميل الصفحة
+  }, [ownerId, slug]); // إعادة التحميل عند تغيير المالك أو الرابط العام
 
   const segmentSize = 360 / segments.length;
 
@@ -789,7 +820,8 @@ const LuckyWheel = () => {
             setTempSegments(updatedSegments);
             
             // حفظ التحديثات في السحابة فوراً لضمان عدم تكرار الكوبون
-            const settingsToSave = {
+            if (ownerId) {
+              const settingsToSave = {
                 segments: updatedSegments,
                 maxSpins: maxSpins,
                 logo: storeLogo,
@@ -798,16 +830,17 @@ const LuckyWheel = () => {
                 winSound: winSound,
                 loseSound: loseSound,
                 googleScriptUrl: googleScriptUrl
-            };
-            
-            // حفظ في السحابة (Supabase و Google Sheets)
-            saveSettingsToCloud(settingsToSave).then(saved => {
-                if (saved) {
-                    console.log('✅ تم حفظ التحديثات في السحابة - الكوبون لن يظهر مرة أخرى');
-                } else {
-                    console.warn('⚠️ فشل حفظ التحديثات في السحابة');
-                }
-            });
+              };
+              saveSettingsToCloud(settingsToSave).then(saved => {
+                if (saved) console.log('✅ تم حفظ التحديثات في السحابة - الكوبون لن يظهر مرة أخرى');
+                else console.warn('⚠️ فشل حفظ التحديثات في السحابة');
+              });
+            } else if (slug) {
+              updateSegmentsForSlug(slug, updatedSegments).then(saved => {
+                if (saved) console.log('✅ تم تحديث الكوبونات في السحابة');
+                else console.warn('⚠️ فشل تحديث الكوبونات');
+              });
+            }
             
             setAiContent({ code: assignedCode, message: assignedMessage });
         } else {
@@ -869,14 +902,15 @@ const LuckyWheel = () => {
           // حفظ في Supabase
           const useSupabase = import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_URL !== 'YOUR_SUPABASE_URL';
           
-          if (useSupabase) {
-            console.log('💾 جاري حفظ بيانات الجائزة في Supabase...');
-            saveSupabaseWinData(winData)
-              .then(saved => {
-                if (saved) console.log('✅ تم حفظ بيانات الجائزة في Supabase');
-              })
-              .catch(err => console.warn('⚠️ فشل حفظ في Supabase:', err));
-          }
+            if (useSupabase) {
+                console.log('💾 جاري حفظ بيانات الجائزة في Supabase...');
+                const saveWin = ownerId
+                  ? saveSupabaseWinData(ownerId, winData)
+                  : slug ? saveWinDataForSlug(slug, winData) : Promise.resolve(false);
+                saveWin.then(saved => {
+                  if (saved) console.log('✅ تم حفظ بيانات الجائزة في Supabase');
+                }).catch(err => console.warn('⚠️ فشل حفظ في Supabase:', err));
+            }
           
           // حفظ في Google Sheets أيضاً (فقط إذا كان الرابط موجود)
           const scriptUrl = googleScriptUrl;
@@ -1051,12 +1085,12 @@ const LuckyWheel = () => {
             // حفظ في Supabase
             if (useSupabase) {
                 console.log('💾 جاري حفظ بيانات المستخدم في Supabase...');
-                saveSupabaseUserData({
-                    name: userData.name,
-                    email: userData.email,
-                    phone: finalPhone
-                }).then(saved => {
-                    if (saved) console.log('✅ تم حفظ بيانات المستخدم في Supabase');
+                const payload = { name: userData.name, email: userData.email, phone: finalPhone };
+                const saveUser = ownerId
+                  ? saveSupabaseUserData(ownerId, payload)
+                  : slug ? saveUserDataForSlug(slug, payload) : Promise.resolve(false);
+                saveUser.then(saved => {
+                  if (saved) console.log('✅ تم حفظ بيانات المستخدم في Supabase');
                 }).catch(err => console.warn('⚠️ فشل حفظ في Supabase:', err));
             }
             
@@ -1370,6 +1404,15 @@ const LuckyWheel = () => {
     );
   };
 
+  // عند فشل تحميل العجلة بالرابط العام
+  if (slug && wheelNotFound) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-slate-900 text-white" dir="rtl" style={{ fontFamily: "'IBM Plex Sans Arabic', sans-serif" }}>
+        <p className="text-xl font-bold text-slate-300">العجلة غير موجودة أو الرابط غير صحيح.</p>
+      </div>
+    );
+  }
+
   // مؤشر التحميل أثناء جلب البيانات من السحابة
   if (isLoadingSettings) {
     // محاولة جلب اللوجو من localStorage أو من البيانات المحملة
@@ -1465,14 +1508,16 @@ const LuckyWheel = () => {
 
       <ConfettiEffect active={showConfetti} />
 
-      <button onClick={handleOpenDashboard} className="absolute top-4 left-4 z-40 bg-slate-800 p-2 rounded-full text-slate-400 hover:text-white hover:bg-slate-700 transition-colors border border-slate-700" title="إعدادات العجلة">
-        <Settings size={20} />
-      </button>
+      {ownerId && (
+        <button onClick={handleOpenDashboard} className="absolute top-4 left-4 z-40 bg-slate-800 p-2 rounded-full text-slate-400 hover:text-white hover:bg-slate-700 transition-colors border border-slate-700" title="إعدادات العجلة">
+          <Settings size={20} />
+        </button>
+      )}
 
       <DashboardPanel
         show={showDashboard}
         onClose={() => setShowDashboard(false)}
-        isDashboardUnlocked={isDashboardUnlocked}
+        isDashboardUnlocked={!!ownerId || isDashboardUnlocked}
         dashboardPassword={dashboardPassword}
         setDashboardPassword={setDashboardPassword}
         onUnlockDashboard={handleUnlockDashboard}
@@ -1509,6 +1554,7 @@ const LuckyWheel = () => {
         handleAddSegment={handleAddSegment}
         handleDeleteSegment={handleDeleteSegment}
         openCouponManager={openCouponManager}
+        ownerSlug={ownerSlug}
       />
 
       <RegistrationModal
