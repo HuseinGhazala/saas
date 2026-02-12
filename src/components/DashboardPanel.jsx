@@ -387,6 +387,20 @@ export default function DashboardPanel(props) {
                               <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mb-8">
                                   <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-4"><LinkIcon className="text-cyan-500" /> إعدادات الفوتر</h3>
                                   
+                                  {/* اسم المتجر (يظهر في حقوق الملكية أسفل الصفحة) */}
+                                  <div className="mb-6">
+                                      <label className="block text-sm font-bold text-slate-700 mb-2">اسم المتجر</label>
+                                      <input
+                                          type="text"
+                                          value={tempFooterSettings.storeName || ''}
+                                          onChange={(e) => setTempFooterSettings({...tempFooterSettings, storeName: e.target.value})}
+                                          placeholder="مثال: خيمة الألعاب"
+                                          className="w-full p-3 border-2 border-slate-200 rounded-lg text-sm focus:border-cyan-500 outline-none"
+                                          dir="rtl"
+                                      />
+                                      <p className="text-xs text-slate-500 mt-1">يظهر في أسفل الصفحة: حقوق الملكية محفوظة © السنة + اسم المتجر</p>
+                                  </div>
+
                                   {/* وصف الفوتر */}
                                   <div className="mb-6">
                                       <label className="block text-sm font-bold text-slate-700 mb-2">النص تحت اللوجو</label>

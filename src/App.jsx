@@ -86,7 +86,8 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null }) => {
           description: '',
           links: [],
           taxId: '',
-          businessPlatformId: ''
+          businessPlatformId: '',
+          storeName: ''
         },
         enableDevToolsProtection: savedEnableDevToolsProtection !== null ? savedEnableDevToolsProtection === 'true' : true,
         wheelStyle: savedWheelStyle || 'classic'
@@ -305,7 +306,8 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null }) => {
     description: '',
     links: [],
     taxId: '',
-    businessPlatformId: ''
+    businessPlatformId: '',
+    storeName: ''
   });
 
   const [isSpinning, setIsSpinning] = useState(false);
@@ -548,7 +550,8 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null }) => {
             description: '',
             links: [],
             taxId: '',
-            businessPlatformId: ''
+            businessPlatformId: '',
+            storeName: ''
           };
           setFooterSettings(loadedFooterSettings);
           console.log('✅ تم تحميل إعدادات الفوتر من السحابة:', {
@@ -601,7 +604,8 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null }) => {
             description: '',
             links: [],
             taxId: '',
-            businessPlatformId: ''
+            businessPlatformId: '',
+            storeName: ''
           }));
           localStorage.setItem('backgroundSettings', JSON.stringify(cloudSettings.backgroundSettings || {}));
           localStorage.setItem('winSound', cloudSettings.winSound || "");
@@ -633,7 +637,8 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null }) => {
               description: '',
               links: [],
               taxId: '',
-              businessPlatformId: ''
+              businessPlatformId: '',
+              storeName: ''
             });
             setBackgroundSettings(localData.backgroundSettings || {
               type: 'color',
@@ -667,7 +672,8 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null }) => {
             description: '',
             links: [],
             taxId: '',
-            businessPlatformId: ''
+            businessPlatformId: '',
+            storeName: ''
           });
           setBackgroundSettings(localData.backgroundSettings || {});
           setWinSound(localData.winSound || "");

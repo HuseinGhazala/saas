@@ -7,6 +7,9 @@ const Footer = ({ logo, socialLinks, footerSettings }) => {
   const footerLinks = footerSettings?.links || [];
   const taxId = footerSettings?.taxId || '';
   const businessPlatformId = (footerSettings?.businessPlatformId || '').trim();
+  const storeName = (footerSettings?.storeName || '').trim();
+  const year = new Date().getFullYear();
+  const copyrightLine = storeName ? `حقوق الملكية محفوظة © ${year} ${storeName}` : `حقوق الملكية محفوظة © ${year}`;
   
   return (
     <footer className="w-full bg-white text-slate-800 border-t border-slate-100 mt-auto relative z-20 font-sans" dir="rtl">
@@ -133,9 +136,9 @@ const Footer = ({ logo, socialLinks, footerSettings }) => {
                 <div className="flex items-center justify-center order-2 md:order-2 w-full md:w-auto">
                     <img src="/payment-methods.svg" alt="وسائل الدفع" className="h-8 md:h-[1.7rem] w-auto object-contain" />
                 </div>
-            {/* Copyright */}
+            {/* Copyright: حقوق الملكية محفوظة © السنة — اسم المتجر من لوحة التحكم */}
                 <p className="text-black text-center text-[14px] md:text-[20px] font-medium leading-normal w-full md:w-auto order-3 md:order-3">
-                    الحقوق محفوظة | 2026 خيمة الألعاب khyma toys
+                    {copyrightLine}
                 </p>
 
 
