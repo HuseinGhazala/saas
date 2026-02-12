@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { XCircle, Lock, Edit3, Save, Plus, Trash2, Upload, Hash, RotateCw, Palette, Monitor, Smartphone, Music, Play, Database, Link as LinkIcon, CheckCircle, AlertCircle, Share2, Facebook, Instagram, Twitter, Ghost, MessageCircle, Globe, Mail, Phone, List, Ticket, Scale, Image as ImageIcon, Copy, Crown } from 'lucide-react';
 import { getPlanInfo, PLANS, PLAN_IDS } from '../lib/plans';
@@ -60,7 +60,7 @@ export default function DashboardPanel(props) {
                               </div>
                           </div>
 
-                          <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-6 bg-slate-100 relative">
+                          <div className="flex-1 overflow-y-auto p-6 bg-slate-100 relative">
                               {/* بطاقة الباقة الحالية */}
                               {(currentPlan !== undefined && currentPlan !== null) && (
                               <div className="bg-gradient-to-r from-slate-800 to-slate-700 text-white rounded-xl p-4 mb-6 shadow-lg border border-slate-600">
