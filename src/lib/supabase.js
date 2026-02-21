@@ -251,3 +251,81 @@ export const updateSegmentsForSlug = async (slug, segments) => {
     return false
   }
 }
+
+// ========== Salla Spin-to-Win: subscription attempts ==========
+
+/**
+ * Check if a merchant has spins left before allowing a spin.
+ * @param {number|string} merchantId - Salla merchant ID (bigint)
+ * @returns {{ eligible: boolean, attemptsUsed?: number, attemptsAllowed?: number, error?: string }}
+ */
+export const checkSpinEligibility = async (merchantId) => {
+  if (merchantId == null || merchantId === '') {
+    return { eligible: false, error: 'merchant_id_required' }
+  }
+  try {
+    const { data, error } = await supabase
+      .from('salla_subscriptions')
+      .select('attempts_used, attempts_allowed')
+      .eq('merchant_id', Number(merchantId))
+      .maybeSingle()
+
+    if (error) {
+      console.error('Error checkSpinEligibility:', error)
+      return { eligible: false, error: error.message }
+    }
+    if (!data) {
+      return { eligible: false, error: 'merchant_not_found' }
+    }
+
+    const { attempts_used: used = 0, attempts_allowed: allowed = 0 } = data
+    const eligible = used < allowed
+    return {
+      eligible,
+      attemptsUsed: used,
+      attemptsAllowed: allowed,
+      ...(eligible ? {} : { error: 'attempts_exceeded' })
+    }
+  } catch (e) {
+    console.error('Error in checkSpinEligibility:', e)
+    return { eligible: false, error: e.message }
+  }
+}
+
+/**
+ * Atomically increment attempts_used by 1 for a merchant (after a successful spin).
+ * Safe for concurrent spins: only increments if attempts_used < attempts_allowed.
+ * @param {number|string} merchantId - Salla merchant ID (bigint)
+ * @returns {{ success: boolean, attemptsUsed?: number, attemptsAllowed?: number, error?: string }}
+ */
+export const incrementAttemptsUsed = async (merchantId) => {
+  if (merchantId == null || merchantId === '') {
+    return { success: false, error: 'merchant_id_required' }
+  }
+  try {
+    const { data, error } = await supabase.rpc('increment_attempts_used', {
+      p_merchant_id: Number(merchantId)
+    })
+
+    if (error) {
+      console.error('Error incrementAttemptsUsed:', error)
+      return { success: false, error: error.message }
+    }
+
+    if (data?.success) {
+      return {
+        success: true,
+        attemptsUsed: data.attempts_used,
+        attemptsAllowed: data.attempts_allowed
+      }
+    }
+
+    return {
+      success: false,
+      error: data?.reason ?? 'attempts_exceeded'
+    }
+  } catch (e) {
+    console.error('Error in incrementAttemptsUsed:', e)
+    return { success: false, error: e.message }
+  }
+}
