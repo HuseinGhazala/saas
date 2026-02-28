@@ -64,6 +64,34 @@ export const updateProfile = async (userId, updates) => {
   return true
 }
 
+// ========== Plans (الباقات من Supabase — عدّل من جدول plans) ==========
+/** جلب حدود باقة واحدة (RPC get_plan_limits). يُرجع null إذا فشل الطلب. */
+export const getPlanLimitsFromSupabase = async (planId) => {
+  try {
+    const { data, error } = await supabase.rpc('get_plan_limits', { plan_id: planId || 'free' })
+    if (error) return null
+    return data
+  } catch (e) {
+    console.error('getPlanLimitsFromSupabase:', e)
+    return null
+  }
+}
+
+/** جلب كل الباقات من جدول plans (لصفحة الترقية أو لوحة التحكم). */
+export const getPlansFromSupabase = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('plans')
+      .select('*')
+      .order('price_monthly', { ascending: true })
+    if (error) return null
+    return data
+  } catch (e) {
+    console.error('getPlansFromSupabase:', e)
+    return null
+  }
+}
+
 // ========== Settings (بالنسبة لمالك مسجّل - SaaS) ==========
 export const getSettings = async (ownerId) => {
   if (!ownerId) return null
@@ -253,6 +281,24 @@ export const updateSegmentsForSlug = async (slug, segments) => {
 }
 
 // ========== Salla Spin-to-Win: subscription attempts ==========
+
+/**
+ * جلب قائمة تجار سلة (لصفحة "تجار سلة")
+ * يتطلب مستخدماً مسجلاً (authenticated).
+ */
+export const getSallaMerchants = async () => {
+  try {
+    const { data, error } = await supabase.rpc('get_salla_merchants')
+    if (error) {
+      console.error('Error getSallaMerchants:', error)
+      return { data: [], error: error.message }
+    }
+    return { data: data ?? [], error: null }
+  } catch (e) {
+    console.error('Error in getSallaMerchants:', e)
+    return { data: [], error: e.message }
+  }
+}
 
 /**
  * Check if a merchant has spins left before allowing a spin.

@@ -29,7 +29,7 @@ import {
   checkSpinEligibility,
   incrementAttemptsUsed
 } from './lib/supabase';
-import { canAddSegment as planCanAddSegment, getPlanInfo } from './lib/plans';
+import { canAddSegment as planCanAddSegment, getPlanInfo, getPlanLimits } from './lib/plans';
 import ConfettiEffect from './components/ConfettiEffect.jsx';
 import Footer from './components/Footer.jsx';
 import RegistrationModal from './components/RegistrationModal.jsx';
@@ -40,6 +40,12 @@ import toast from 'react-hot-toast';
 const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan = 'free', merchantId = null }) => {
   const navigate = useNavigate();
   const apiKey = ""; 
+
+  // عدد المحاولات من الباقة فقط (لا يحددها التاجر)
+  const getMaxSpinsFromPlan = (plan) => {
+    const L = getPlanLimits(plan || 'free');
+    return L.maxSpinsPerMonth === -1 ? 9999 : Math.max(1, L.maxSpinsPerMonth);
+  };
 
   // لا يوجد رابط افتراضي - يجب إدخاله من لوحة التحكم 
 
@@ -255,9 +261,10 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan =
   const [segments, setSegments] = useState(loadedSettings?.segments || initialSegments);
   const [availableIds, setAvailableIds] = useState((loadedSettings?.segments || initialSegments).map(s => s.id));
   
-  // التحكم في عدد المحاولات والشعار وروابط السوشيال ميديا ورابط السكربت والخلفية
-  const [maxSpins, setMaxSpins] = useState(loadedSettings?.maxSpins || 1);
-  const [remainingSpins, setRemainingSpins] = useState(loadedSettings?.maxSpins || 1);
+  // التحكم في عدد المحاولات (من الباقة أو سلة فقط — لا يحددها التاجر)
+  const defaultMax = ownerId && !merchantId ? getMaxSpinsFromPlan(ownerPlan) : (loadedSettings?.maxSpins || 1);
+  const [maxSpins, setMaxSpins] = useState(merchantId ? 1 : defaultMax);
+  const [remainingSpins, setRemainingSpins] = useState(merchantId ? 1 : defaultMax);
   const [storeLogo, setStoreLogo] = useState(loadedSettings?.logo || null);
   
   // إعدادات الخلفية (محدثة لدعم صورتين)
@@ -281,7 +288,7 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan =
   const [enableDevToolsProtection, setEnableDevToolsProtection] = useState(loadedSettings?.enableDevToolsProtection !== undefined ? loadedSettings.enableDevToolsProtection : true);
 
   // شكل العجلة
-  const [wheelStyle, setWheelStyle] = useState(loadedSettings?.wheelStyle || 'classic');
+  const [wheelStyle, setWheelStyle] = useState(ownerPlan === 'free' ? 'classic' : (loadedSettings?.wheelStyle || 'classic'));
 
   const [socialLinks, setSocialLinks] = useState(loadedSettings?.socialLinks || {
     facebook: '',
@@ -345,7 +352,6 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan =
   
   // حالات مؤقتة للداشبورد (قبل الحفظ)
   const [tempSegments, setTempSegments] = useState(initialSegments);
-  const [tempMaxSpins, setTempMaxSpins] = useState(1);
   const [tempLogo, setTempLogo] = useState(null);
   const [tempSocialLinks, setTempSocialLinks] = useState({ ...socialLinks });
   const [tempFooterSettings, setTempFooterSettings] = useState({ ...footerSettings });
@@ -537,11 +543,18 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan =
             }
           });
           
-          // تحديث جميع الحالات بالبيانات من السحابة
+          // تحديث جميع الحالات بالبيانات من السحابة (عدد المحاولات من الباقة فقط عند وجود مالك غير سلة)
           setSegments(cleanedSegments);
           setAvailableIds(cleanedSegments.map(s => s.id));
-          setMaxSpins(cloudSettings.maxSpins || 1);
-          setRemainingSpins(cloudSettings.maxSpins || 1);
+          if (ownerId && !merchantId) {
+            const m = getMaxSpinsFromPlan(ownerPlan);
+            setMaxSpins(m);
+            setRemainingSpins(m);
+            if (ownerPlan === 'free') setWheelStyle('classic');
+          } else if (!merchantId) {
+            setMaxSpins(cloudSettings.maxSpins || 1);
+            setRemainingSpins(cloudSettings.maxSpins || 1);
+          }
           setStoreLogo(cloudSettings.logo || null);
           setSocialLinks(cloudSettings.socialLinks || {
             facebook: '',
@@ -600,7 +613,7 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan =
           
           // حفظ في localStorage كنسخة احتياطية (باستخدام cleanedSegments)
           localStorage.setItem('wheelSegments', JSON.stringify(cleanedSegments));
-          localStorage.setItem('maxSpins', (cloudSettings.maxSpins || 1).toString());
+          localStorage.setItem('maxSpins', (ownerId && !merchantId ? getMaxSpinsFromPlan(ownerPlan) : (cloudSettings.maxSpins || 1)).toString());
           if (cloudSettings.logo) {
             localStorage.setItem('storeLogo', cloudSettings.logo);
           } else {
@@ -627,8 +640,15 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan =
           if (localData) {
             setSegments(localData.segments || initialSegments);
             setAvailableIds((localData.segments || initialSegments).map(s => s.id));
-            setMaxSpins(localData.maxSpins || 1);
-            setRemainingSpins(localData.maxSpins || 1);
+            if (ownerId && !merchantId) {
+              const m = getMaxSpinsFromPlan(ownerPlan);
+              setMaxSpins(m);
+              setRemainingSpins(m);
+              if (ownerPlan === 'free') setWheelStyle('classic');
+            } else {
+              setMaxSpins(localData.maxSpins || 1);
+              setRemainingSpins(localData.maxSpins || 1);
+            }
             setStoreLogo(localData.logo || null);
             setSocialLinks(localData.socialLinks || {
               facebook: '',
@@ -671,8 +691,15 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan =
         if (localData) {
           setSegments(localData.segments || initialSegments);
           setAvailableIds((localData.segments || initialSegments).map(s => s.id));
-          setMaxSpins(localData.maxSpins || 1);
-          setRemainingSpins(localData.maxSpins || 1);
+          if (ownerId && !merchantId) {
+            const m = getMaxSpinsFromPlan(ownerPlan);
+            setMaxSpins(m);
+            setRemainingSpins(m);
+            if (ownerPlan === 'free') setWheelStyle('classic');
+          } else {
+            setMaxSpins(localData.maxSpins || 1);
+            setRemainingSpins(localData.maxSpins || 1);
+          }
           setStoreLogo(localData.logo || null);
           setSocialLinks(localData.socialLinks || {});
           setFooterSettings(localData.footerSettings || {
@@ -698,7 +725,7 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan =
     };
     
     loadCloudSettings();
-  }, [ownerId, slug]); // إعادة التحميل عند تغيير المالك أو الرابط العام
+  }, [ownerId, slug, ownerPlan, merchantId]);
 
   // عند الدخول من سلة (merchantId): جلب عدد المحاولات المسموحة والمتبقية
   useEffect(() => {
@@ -1221,7 +1248,6 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan =
   // --- منطق لوحة التحكم ---
   const handleOpenDashboard = () => {
       setTempSegments(segments);
-      setTempMaxSpins(maxSpins);
       setTempLogo(storeLogo);
       setTempSocialLinks({ ...socialLinks });
       setTempFooterSettings({ ...footerSettings });
@@ -1231,7 +1257,7 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan =
       setTempLoseSound(loseSound);
       setTempBackgroundSettings(backgroundSettings);
       setTempEnableDevToolsProtection(enableDevToolsProtection);
-      setTempWheelStyle(wheelStyle);
+      setTempWheelStyle(ownerPlan === 'free' ? 'classic' : wheelStyle);
       setShowDashboard(true);
   };
 
@@ -1387,9 +1413,12 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan =
 
   const handleSaveDashboard = async () => {
       // حفظ في state
+      const planLimits = getPlanLimits(ownerPlan);
+      const maxSpinsFromPlan = planLimits.maxSpinsPerMonth === -1 ? 9999 : Math.max(1, planLimits.maxSpinsPerMonth);
+      const effectiveMaxSpins = merchantId ? maxSpins : maxSpinsFromPlan;
       setSegments(tempSegments);
-      setMaxSpins(tempMaxSpins);
-      setRemainingSpins(tempMaxSpins);
+      setMaxSpins(effectiveMaxSpins);
+      setRemainingSpins(effectiveMaxSpins);
       setStoreLogo(tempLogo);
       setSocialLinks(tempSocialLinks);
       setFooterSettings(tempFooterSettings);
@@ -1407,12 +1436,13 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan =
       // حفظ إعدادات الحماية
       setEnableDevToolsProtection(tempEnableDevToolsProtection);
 
-      // حفظ شكل العجلة
-      setWheelStyle(tempWheelStyle);
+      // حفظ شكل العجلة (المجانية: كلاسيكي فقط)
+      const effectiveWheelStyle = ownerPlan === 'free' ? 'classic' : tempWheelStyle;
+      setWheelStyle(effectiveWheelStyle);
 
       // حفظ جميع البيانات في localStorage كنسخة احتياطية
       localStorage.setItem('wheelSegments', JSON.stringify(tempSegments));
-      localStorage.setItem('maxSpins', tempMaxSpins.toString());
+      localStorage.setItem('maxSpins', effectiveMaxSpins.toString());
       if (tempLogo) {
         localStorage.setItem('storeLogo', tempLogo);
       } else {
@@ -1424,12 +1454,12 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan =
       localStorage.setItem('winSound', tempWinSound);
       localStorage.setItem('loseSound', tempLoseSound);
       localStorage.setItem('enableDevToolsProtection', tempEnableDevToolsProtection.toString());
-      localStorage.setItem('wheelStyle', tempWheelStyle);
+      localStorage.setItem('wheelStyle', effectiveWheelStyle);
 
       // حفظ البيانات في السحابة (Supabase) لجميع المستخدمين
       const settingsToSave = {
         segments: tempSegments,
-        maxSpins: tempMaxSpins,
+        maxSpins: effectiveMaxSpins,
         logo: tempLogo,
         socialLinks: tempSocialLinks,
         footerSettings: tempFooterSettings,
@@ -1438,7 +1468,7 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan =
         loseSound: tempLoseSound,
         googleScriptUrl: tempGoogleScriptUrl,
         enableDevToolsProtection: tempEnableDevToolsProtection,
-        wheelStyle: tempWheelStyle
+        wheelStyle: effectiveWheelStyle
       };
       
       console.log('💾 جاري حفظ إعدادات الفوتر في السحابة:', {
@@ -1605,8 +1635,6 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan =
         tempLogo={tempLogo}
         setTempLogo={setTempLogo}
         onLogoUpload={handleLogoUpload}
-        tempMaxSpins={tempMaxSpins}
-        setTempMaxSpins={setTempMaxSpins}
         tempWheelStyle={tempWheelStyle}
         setTempWheelStyle={setTempWheelStyle}
         tempBackgroundSettings={tempBackgroundSettings}

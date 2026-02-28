@@ -13,11 +13,14 @@ export const PLANS = {
     id: PLAN_IDS.FREE,
     nameAr: 'مجاني',
     nameEn: 'Free',
-    maxSegments: 6,
-    maxSpinsPerMonth: 100,
-    canCustomLogo: true,
-    canCustomSounds: true,
-    canSocialLinks: true,
+    maxSegments: 2,
+    maxSpinsPerMonth: 6,
+    canCustomLogo: false,
+    canCustomSounds: false,
+    canSocialLinks: false,
+    canCustomWheelStyle: false,   // كلاسيكي فقط
+    canCustomBackground: false,   // لون افتراضي فقط، لا صورة ولا تغيير لون
+    canFooterSettings: false,
     priceMonthly: 0,
     priceYearly: 0
   },
@@ -25,11 +28,14 @@ export const PLANS = {
     id: PLAN_IDS.BASIC,
     nameAr: 'أساسي',
     nameEn: 'Basic',
-    maxSegments: 12,
-    maxSpinsPerMonth: 500,
+    maxSegments: 4,
+    maxSpinsPerMonth: 100,
     canCustomLogo: true,
     canCustomSounds: true,
     canSocialLinks: true,
+    canCustomWheelStyle: true,
+    canCustomBackground: true,
+    canFooterSettings: true,
     priceMonthly: 29,
     priceYearly: 290
   },
@@ -38,10 +44,13 @@ export const PLANS = {
     nameAr: 'برو',
     nameEn: 'Pro',
     maxSegments: 999,
-    maxSpinsPerMonth: -1,
+    maxSpinsPerMonth: -1, // غير محدود
     canCustomLogo: true,
     canCustomSounds: true,
     canSocialLinks: true,
+    canCustomWheelStyle: true,
+    canCustomBackground: true,
+    canFooterSettings: true,
     priceMonthly: 99,
     priceYearly: 990
   }
@@ -58,7 +67,10 @@ export function getPlanLimits(planId) {
     maxSpinsPerMonth: plan.maxSpinsPerMonth,
     canCustomLogo: plan.canCustomLogo,
     canCustomSounds: plan.canCustomSounds,
-    canSocialLinks: plan.canSocialLinks
+    canSocialLinks: plan.canSocialLinks,
+    canCustomWheelStyle: plan.canCustomWheelStyle,
+    canCustomBackground: plan.canCustomBackground,
+    canFooterSettings: plan.canFooterSettings
   }
 }
 

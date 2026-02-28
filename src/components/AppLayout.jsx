@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Outlet, useNavigate } from 'react-router-dom'
+import { Outlet, useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useSalla } from '../contexts/SallaContext'
 import { signOut } from '../lib/supabase'
@@ -12,6 +12,9 @@ export default function AppLayout() {
   const [loggingOut, setLoggingOut] = useState(false)
 
   const canAccess = isAuthenticated || isSallaSession
+
+  // زر تسجيل الخروج يظهر فقط لعميل سلة (اللي ثبّت التطبيق في متجره)، مش للاند يوزر
+  const isSallaMerchant = isSallaSession || !!(isAuthenticated && profile?.merchant_id)
 
   useEffect(() => {
     if (!loading && !canAccess) {
@@ -54,16 +57,26 @@ export default function AppLayout() {
           {isSallaSession && sallaMerchantId && (
             <span className="font-medium">سلة · {sallaMerchantId}</span>
           )}
+          {isAuthenticated && (
+            <Link
+              to="/app/salla-merchants"
+              className="font-medium text-amber-400 hover:text-amber-300 transition-colors"
+            >
+              تجار سلة
+            </Link>
+          )}
         </div>
-        <button
-          onClick={handleLogout}
-          disabled={loggingOut}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-700 hover:bg-red-600/90 text-white font-bold transition-colors disabled:opacity-50"
-          title="تسجيل الخروج"
-        >
-          <LogOut size={18} />
-          {loggingOut ? 'جاري الخروج...' : 'تسجيل الخروج'}
-        </button>
+        {isSallaMerchant && (
+          <button
+            onClick={handleLogout}
+            disabled={loggingOut}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-700 hover:bg-red-600/90 text-white font-bold transition-colors disabled:opacity-50"
+            title="تسجيل الخروج"
+          >
+            <LogOut size={18} />
+            {loggingOut ? 'جاري الخروج...' : 'تسجيل الخروج'}
+          </button>
+        )}
       </header>
       <main className="flex-1">
         <Outlet />
