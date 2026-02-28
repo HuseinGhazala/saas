@@ -28,7 +28,7 @@ function setupSheets() {
     winsSheet.appendRow(["Timestamp", "Name", "Email", "Phone", "Prize", "Coupon Code"]);
   }
   
-  Logger.log("✅ تم إنشاء جميع الصفحات بنجاح!");
+  Logger.log("✅ تم إنشاء جlيع الصفحات بنجاح!");
 }
 
 function doGet(e) {
@@ -49,6 +49,8 @@ function handleRequest(e) {
     
     // 1. استخراج المعاملات (Parameters) بذكاء
     let params = e.parameter || {};
+
+
     
     // إذا لم نجد بيانات في parameter، نحاول قراءتها من postData (مهم جداً لـ fetch no-cors)
     if ((!params || Object.keys(params).length === 0) && e.postData && e.postData.contents) {
