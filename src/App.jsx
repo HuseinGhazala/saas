@@ -25,7 +25,9 @@ import {
   saveWinData as saveSupabaseWinData,
   saveUserDataForSlug,
   saveWinDataForSlug,
-  updateSegmentsForSlug
+  updateSegmentsForSlug,
+  checkSpinEligibility,
+  incrementAttemptsUsed
 } from './lib/supabase';
 import { canAddSegment as planCanAddSegment, getPlanInfo } from './lib/plans';
 import ConfettiEffect from './components/ConfettiEffect.jsx';
@@ -35,7 +37,7 @@ import WinnerModal from './components/WinnerModal.jsx';
 import DashboardPanel from './components/DashboardPanel.jsx';
 import toast from 'react-hot-toast';
 
-const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan = 'free' }) => {
+const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan = 'free', merchantId = null }) => {
   const navigate = useNavigate();
   const apiKey = ""; 
 
@@ -698,6 +700,27 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan =
     loadCloudSettings();
   }, [ownerId, slug]); // إعادة التحميل عند تغيير المالك أو الرابط العام
 
+  // عند الدخول من سلة (merchantId): جلب عدد المحاولات المسموحة والمتبقية
+  useEffect(() => {
+    if (!merchantId) return;
+    let cancelled = false;
+    (async () => {
+      const result = await checkSpinEligibility(merchantId);
+      if (cancelled) return;
+      if (result.error && result.error !== 'attempts_exceeded') {
+        console.warn('checkSpinEligibility:', result.error);
+        setRemainingSpins(0);
+        setMaxSpins(0);
+        return;
+      }
+      const allowed = result.attemptsAllowed ?? 0;
+      const used = result.attemptsUsed ?? 0;
+      setMaxSpins(allowed);
+      setRemainingSpins(Math.max(0, allowed - used));
+    })();
+    return () => { cancelled = true; };
+  }, [merchantId]);
+
   const segmentSize = 360 / segments.length;
 
   useEffect(() => {
@@ -768,7 +791,7 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan =
     }
   };
 
-  const spinWheel = (isAutoSpin = false) => {
+  const spinWheel = async (isAutoSpin = false) => {
     const isSystemSpin = typeof isAutoSpin === 'boolean' && isAutoSpin === true;
 
     if (!isSystemSpin && !isRegistered) {
@@ -777,6 +800,21 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan =
     }
 
     if (isSpinning || availableIds.length === 0 || remainingSpins <= 0) return;
+
+    // عند الدخول من سلة: التحقق من أهليّة الدوران قبل البدء
+    if (merchantId) {
+      const eligibility = await checkSpinEligibility(merchantId);
+      if (!eligibility.eligible) {
+        if (eligibility.error === 'attempts_exceeded') {
+          toast.error('انتهت محاولاتك لهذا الشهر. يمكنك ترقية الباقة من متجر سلة.');
+        } else if (eligibility.error === 'merchant_not_found') {
+          toast.error('لم يتم العثور على اشتراكك. ثبّت التطبيق من متجر سلة أولاً.');
+        } else {
+          toast.error('لا يمكنك الدوران الآن. تحقق من اشتراكك في سلة.');
+        }
+        return;
+      }
+    }
     
     if (!isMuted && spinAudioRef.current) {
         spinAudioRef.current.currentTime = 0;
@@ -875,6 +913,16 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan =
       
       setRemainingSpins(prev => Math.max(0, prev - 1));
 
+      // عند الدخول من سلة: خصم محاولة واحدة من اشتراك المتجر
+      if (merchantId) {
+        incrementAttemptsUsed(merchantId).then((result) => {
+          if (result.success && result.attemptsAllowed != null && result.attemptsUsed != null) {
+            setRemainingSpins(Math.max(0, result.attemptsAllowed - result.attemptsUsed));
+            setMaxSpins(result.attemptsAllowed);
+          }
+        }).catch(() => {});
+      }
+
       if (!isMuted) {
           if (spinAudioRef.current) {
               spinAudioRef.current.pause();
@@ -964,6 +1012,7 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan =
                         if (i === retries - 1) {
                             console.error('❌ فشل حفظ في Google Sheets بعد جميع المحاولات');
                             console.error('تفاصيل:', err.message);
+                            toast.error('فشل إرسال بيانات الجائزة. تحقق من رابط Google Script والإعدادات.');
                         } else {
                             // انتظر قليلاً قبل المحاولة التالية
                             await new Promise(resolve => setTimeout(resolve, 1000));
@@ -1143,6 +1192,7 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan =
                             if (i === retries - 1) {
                                 console.error('❌ فشل حفظ في Google Sheets بعد جميع المحاولات');
                                 console.error('تفاصيل:', err.message);
+                                toast.error('فشل إرسال بيانات التسجيل. تحقق من رابط Google Script والإعدادات.');
                             } else {
                                 // انتظر قليلاً قبل المحاولة التالية
                                 await new Promise(resolve => setTimeout(resolve, 1000));
@@ -1161,7 +1211,7 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan =
             setTimeout(() => { spinWheel(true); }, 500);
         } catch (error) {
             console.error("Error sending data:", error);
-            toast.error("حدث خطأ في الاتصال، يرجى التأكد من الإعدادات والمحاولة مرة أخرى.");
+            toast.error('حدث خطأ في الاتصال. يرجى التأكد من الإعدادات والمحاولة مرة أخرى.');
         } finally {
             setIsSubmitting(false);
         }

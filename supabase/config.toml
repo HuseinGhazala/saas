@@ -1,0 +1,5 @@
+# إعدادات مشروع Supabase (للـ CLI)
+# الدالة rapid-task تستقبل ويب هوك من سلة بدون توكن Supabase
+
+[functions.rapid-task]
+verify_jwt = false

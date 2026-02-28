@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { Crown, Check, ArrowRight } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import { useSalla } from '../contexts/SallaContext'
 import { PLANS, PLAN_IDS, getPlanInfo } from '../lib/plans'
 
 const PAYMENT_BASIC = import.meta.env.VITE_PAYMENT_BASIC_URL || ''
@@ -29,6 +30,7 @@ function openPayment(planId) {
 
 export default function Upgrade() {
   const { profile, loading, isAuthenticated } = useAuth()
+  const { isSallaSession } = useSalla()
   const currentPlan = profile?.plan || 'free'
 
   if (loading) {
@@ -39,11 +41,28 @@ export default function Upgrade() {
     )
   }
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated && !isSallaSession) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-slate-900 text-white p-6" dir="rtl">
         <p className="text-xl font-bold">يجب تسجيل الدخول أولاً</p>
         <Link to="/login" className="text-amber-400 hover:underline">تسجيل الدخول</Link>
+      </div>
+    )
+  }
+
+  if (isSallaSession) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-6 bg-slate-900 text-white p-6" dir="rtl" style={{ fontFamily: "'IBM Plex Sans Arabic', sans-serif" }}>
+        <h1 className="text-2xl font-black flex items-center gap-2">
+          <Crown className="text-amber-400" size={28} />
+          ترقية الباقة
+        </h1>
+        <p className="text-slate-300 text-center max-w-md">
+          أنت تدخل من متجر سلة. لترقية الباقة أو إدارة الاشتراك استخدم متجر تطبيقات سلة من لوحة تحكم متجرك.
+        </p>
+        <Link to="/app" className="text-amber-400 hover:underline font-bold flex items-center gap-1">
+          العودة للعجلة <ArrowRight size={18} />
+        </Link>
       </div>
     )
   }

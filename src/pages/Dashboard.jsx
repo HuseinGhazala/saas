@@ -1,17 +1,21 @@
 import React, { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { useSalla } from '../contexts/SallaContext'
 import LuckyWheel from '../App'
 
 export default function Dashboard() {
   const { user, profile, loading, isAuthenticated } = useAuth()
+  const { sallaMerchantId, isSallaSession } = useSalla()
   const navigate = useNavigate()
 
+  const canAccess = isAuthenticated || isSallaSession
+
   useEffect(() => {
-    if (!loading && !isAuthenticated) {
+    if (!loading && !canAccess) {
       navigate('/login', { replace: true })
     }
-  }, [loading, isAuthenticated, navigate])
+  }, [loading, canAccess, navigate])
 
   if (loading) {
     return (
@@ -21,7 +25,26 @@ export default function Dashboard() {
     )
   }
 
+  if (!canAccess) return null
+
+  if (isSallaSession && sallaMerchantId) {
+    return (
+      <LuckyWheel
+        merchantId={sallaMerchantId}
+        ownerId={null}
+        ownerSlug={null}
+        ownerPlan="free"
+      />
+    )
+  }
+
   if (!user) return null
 
-  return <LuckyWheel ownerId={user.id} ownerSlug={profile?.slug} ownerPlan={profile?.plan} />
+  return (
+    <LuckyWheel
+      ownerId={user.id}
+      ownerSlug={profile?.slug}
+      ownerPlan={profile?.plan}
+    />
+  )
 }

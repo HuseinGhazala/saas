@@ -1,12 +1,14 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { signIn } from '../lib/supabase'
-import { Mail, Lock, Loader2, Gift } from 'lucide-react'
+import { translateAuthError } from '../lib/errorMessages'
+import { Mail, Lock, Loader2, Gift, Eye, EyeOff } from 'lucide-react'
 
 export default function Login() {
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -18,7 +20,7 @@ export default function Login() {
       await signIn(email, password)
       navigate('/app', { replace: true })
     } catch (err) {
-      setError(err.message || 'فشل تسجيل الدخول')
+      setError(translateAuthError(err?.message, 'فشل تسجيل الدخول'))
     } finally {
       setLoading(false)
     }
@@ -61,13 +63,22 @@ export default function Login() {
             <div className="relative">
               <Lock className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
               <input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-600 rounded-lg py-2.5 pr-10 pl-4 text-white placeholder-slate-500 focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500"
+                className="w-full bg-slate-900 border border-slate-600 rounded-lg py-2.5 pr-10 pl-10 text-white placeholder-slate-500 focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500"
                 placeholder="••••••••"
                 required
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword((p) => !p)}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors p-0.5"
+                title={showPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
           </div>
           <button
@@ -79,12 +90,6 @@ export default function Login() {
           </button>
         </form>
 
-        <p className="mt-6 text-center text-slate-400 text-sm">
-          لا تملك حساباً؟{' '}
-          <Link to="/signup" className="text-amber-400 hover:underline font-medium">
-            إنشاء حساب
-          </Link>
-        </p>
       </div>
     </div>
   )

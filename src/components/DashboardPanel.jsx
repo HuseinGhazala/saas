@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { XCircle, Lock, Edit3, Save, Plus, Trash2, Upload, Hash, RotateCw, Palette, Monitor, Smartphone, Music, Play, Database, Link as LinkIcon, CheckCircle, AlertCircle, Share2, Facebook, Instagram, Twitter, Ghost, MessageCircle, Globe, Mail, Phone, List, Ticket, Scale, Image as ImageIcon, Copy, Crown } from 'lucide-react';
+import { XCircle, Lock, Edit3, Save, Plus, Trash2, Upload, Hash, RotateCw, Palette, Monitor, Smartphone, Music, Play, Database, Link as LinkIcon, CheckCircle, AlertCircle, Share2, Facebook, Instagram, Twitter, Ghost, MessageCircle, Globe, Mail, Phone, List, Ticket, Scale, Image as ImageIcon, Copy, Crown, Eye, EyeOff } from 'lucide-react';
 import { getPlanInfo, PLANS, PLAN_IDS } from '../lib/plans';
 
 export default function DashboardPanel(props) {
@@ -15,6 +15,7 @@ export default function DashboardPanel(props) {
     ownerSlug, currentPlan, currentSegmentsCount
   } = props;
   const [linkCopied, setLinkCopied] = useState(false);
+  const [showDashboardPassword, setShowDashboardPassword] = useState(false);
   const publicUrl = ownerSlug ? `${typeof window !== 'undefined' ? window.location.origin : ''}/w/${ownerSlug}` : '';
   const copyPublicLink = () => {
     if (publicUrl) {
@@ -34,7 +35,25 @@ export default function DashboardPanel(props) {
                           <h2 className="text-2xl font-bold mb-2">لوحة التحكم محمية</h2>
                           <p className="text-slate-500 mb-6">أدخل كلمة المرور للمتابعة (الافتراضية: admin)</p>
                           <form onSubmit={onUnlockDashboard} className="flex gap-2 w-full max-w-xs">
-                              <input type="password" placeholder="كلمة المرور" className="flex-1 px-4 py-2 border-2 border-slate-300 rounded-lg focus:border-blue-500 outline-none text-center" value={dashboardPassword} onChange={(e) => setDashboardPassword(e.target.value)} autoFocus />
+                              <div className="relative flex-1 flex">
+                                  <input
+                                    type={showDashboardPassword ? 'text' : 'password'}
+                                    placeholder="كلمة المرور"
+                                    className="flex-1 px-4 py-2 pr-10 border-2 border-slate-300 rounded-lg focus:border-blue-500 outline-none text-center"
+                                    value={dashboardPassword}
+                                    onChange={(e) => setDashboardPassword(e.target.value)}
+                                    autoFocus
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => setShowDashboardPassword((p) => !p)}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 p-1"
+                                    title={showDashboardPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
+                                    tabIndex={-1}
+                                  >
+                                    {showDashboardPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                  </button>
+                              </div>
                               <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-blue-700">دخول</button>
                           </form>
                       </div>
