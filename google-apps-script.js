@@ -1,7 +1,7 @@
 // إعدادات الصفحات
 const SHEET_SETTINGS = "Settings";
 const SHEET_USER_DATA = "UserData";
-const SHEET_WINS = "Wins";
+const SHEET_WINS = "Wins ";
 
 /**
  * دالة الإعداد الأولي
