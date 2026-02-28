@@ -45,6 +45,7 @@ export default function Dashboard() {
       ownerId={user.id}
       ownerSlug={profile?.slug}
       ownerPlan={profile?.plan}
+      merchantId={profile?.merchant_id ?? undefined}
     />
   )
 }
