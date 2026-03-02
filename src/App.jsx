@@ -255,9 +255,12 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan =
   const [segments, setSegments] = useState(loadedSettings?.segments || initialSegments);
   const [availableIds, setAvailableIds] = useState((loadedSettings?.segments || initialSegments).map(s => s.id));
   
-  // التحكم في عدد المحاولات (سلة فقط: من API عند وجود merchantId، وإلا من الإعدادات المحملة للعرض العام)
+  // التحكم في عدد المحاولات (سلة فقط: من API عند وجود merchantId أو merchant_id من الرابط العام، وإلا من الإعدادات)
   const [maxSpins, setMaxSpins] = useState(merchantId ? 1 : (loadedSettings?.maxSpins || 1));
   const [remainingSpins, setRemainingSpins] = useState(merchantId ? 1 : (loadedSettings?.maxSpins || 1));
+  // عند فتح العجلة من الرابط العام (/w/slug) نأخذ merchant_id من الإعدادات المحملة لخصم المحاولات وعرض العدد
+  const [merchantIdFromSlug, setMerchantIdFromSlug] = useState(null);
+  const effectiveMerchantId = merchantId || merchantIdFromSlug;
   const [storeLogo, setStoreLogo] = useState(loadedSettings?.logo || null);
   
   // إعدادات الخلفية (محدثة لدعم صورتين)
@@ -536,10 +539,13 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan =
             }
           });
           
-          // تحديث الحالات من السحابة (المحاولات لسلة من API لاحقاً)
+          // تحديث الحالات من السحابة (المحاولات لسلة من API عند وجود effectiveMerchantId)
           setSegments(cleanedSegments);
           setAvailableIds(cleanedSegments.map(s => s.id));
-          if (!merchantId) {
+          if (cloudSettings.merchant_id != null) {
+            setMerchantIdFromSlug(cloudSettings.merchant_id);
+            // لا نحدّث maxSpins/remainingSpins هنا — سيتم من useEffect عبر checkSpinEligibility(effectiveMerchantId)
+          } else if (!merchantId) {
             setMaxSpins(cloudSettings.maxSpins || 1);
             setRemainingSpins(cloudSettings.maxSpins || 1);
           }
@@ -705,12 +711,12 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan =
     loadCloudSettings();
   }, [ownerId, slug, ownerPlan, merchantId]);
 
-  // عند الدخول من سلة (merchantId): جلب عدد المحاولات المسموحة والمتبقية
+  // عند الدخول من سلة (merchantId أو من الرابط العام): جلب عدد المحاولات المسموحة والمتبقية من API
   useEffect(() => {
-    if (!merchantId) return;
+    if (!effectiveMerchantId) return;
     let cancelled = false;
     (async () => {
-      const result = await checkSpinEligibility(merchantId);
+      const result = await checkSpinEligibility(effectiveMerchantId);
       if (cancelled) return;
       if (result.error && result.error !== 'attempts_exceeded') {
         console.warn('checkSpinEligibility:', result.error);
@@ -724,7 +730,7 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan =
       setRemainingSpins(Math.max(0, allowed - used));
     })();
     return () => { cancelled = true; };
-  }, [merchantId]);
+  }, [effectiveMerchantId]);
 
   const segmentSize = 360 / segments.length;
 
@@ -807,8 +813,8 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan =
     if (isSpinning || availableIds.length === 0 || remainingSpins <= 0) return;
 
     // عند الدخول من سلة: التحقق من أهليّة الدوران قبل البدء
-    if (merchantId) {
-      const eligibility = await checkSpinEligibility(merchantId);
+    if (effectiveMerchantId) {
+      const eligibility = await checkSpinEligibility(effectiveMerchantId);
       if (!eligibility.eligible) {
         if (eligibility.error === 'attempts_exceeded') {
           toast.error('انتهت محاولاتك لهذا الشهر. يمكنك ترقية الاشتراك من متجر سلة.');
@@ -918,9 +924,9 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan =
       
       setRemainingSpins(prev => Math.max(0, prev - 1));
 
-      // عند الدخول من سلة: خصم محاولة واحدة من اشتراك المتجر
-      if (merchantId) {
-        incrementAttemptsUsed(merchantId).then((result) => {
+      // عند الدخول من سلة (تاجر أو رابط عام): خصم محاولة واحدة من اشتراك المتجر في Supabase
+      if (effectiveMerchantId) {
+        incrementAttemptsUsed(effectiveMerchantId).then((result) => {
           if (result.success && result.attemptsAllowed != null && result.attemptsUsed != null) {
             setRemainingSpins(Math.max(0, result.attemptsAllowed - result.attemptsUsed));
             setMaxSpins(result.attemptsAllowed);

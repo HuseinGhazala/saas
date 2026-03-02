@@ -107,18 +107,31 @@ async function fetchSallaUserInfo(accessToken: string): Promise<SallaStoreInfo |
     const res = await fetch(SALLA_USER_INFO_URL, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
-    if (!res.ok) return null;
-    const json = await res.json();
-    const data = json?.data;
-    if (!data?.email) return null;
-    const merchant = data.merchant ?? data.store;
+    const json = await res.json().catch(() => ({}));
+    const data = json?.data ?? json;
+
+    if (!res.ok) {
+      console.error("Salla user/info API error:", res.status, JSON.stringify(json).slice(0, 300));
+      return null;
+    }
+
+    // دعم أكثر من شكل استجابة: data.merchant أو data.store أو بيانات مباشرة
+    const merchant = data?.merchant ?? data?.store ?? data;
+    const email = data?.email ?? merchant?.email ?? "";
+    const userName = data?.name ?? merchant?.name ?? "";
+    const storeName = String(merchant?.name ?? "").trim() || String(userName || "تاجر سلة").trim();
+    const storeUrl = String(merchant?.domain ?? data?.domain ?? "").trim();
+    const plan = String(merchant?.plan ?? data?.plan ?? "").trim();
+    const status = String(merchant?.status ?? data?.status ?? "").trim();
+
+    // حتى لو الإيميل فاضي نُرجع بيانات المتجر عشان نملّي salla_merchants (إنشاء الحساب يحتاج إيميل)
     return {
-      email: String(data.email).trim(),
-      name: String(data.name || merchant?.name || "تاجر سلة").trim(),
-      store_name: String(merchant?.name ?? "").trim() || String(data.name || "تاجر سلة").trim(),
-      store_url: String(merchant?.domain ?? "").trim(),
-      current_plan: String(merchant?.plan ?? "").trim(),
-      store_status: String(merchant?.status ?? "").trim(),
+      email: String(email).trim(),
+      name: String(userName || "تاجر سلة").trim(),
+      store_name: storeName,
+      store_url: storeUrl,
+      current_plan: plan,
+      store_status: status,
     };
   } catch (e) {
     console.error("fetchSallaUserInfo error:", e);
@@ -403,6 +416,23 @@ Deno.serve(async (req) => {
       default:
         // أي حدث ثاني نستقبله ونجيب 200 عشان سلة ما تعيد المحاولة
         break;
+    }
+
+    // إذا بيانات المتجر فاضية والموجود توكن: نحدّث من API سلة (استدراك)
+    const { data: merchantRow } = await supabase.from("salla_merchants").select("access_token, store_name, current_plan").eq("merchant_id", merchantId).maybeSingle();
+    if (merchantRow?.access_token && (merchantRow.store_name == null || merchantRow.current_plan == null)) {
+      const info = await fetchSallaUserInfo(merchantRow.access_token as string);
+      if (info) {
+        const upd: Record<string, unknown> = {};
+        if (info.store_name?.trim()) upd.store_name = info.store_name.trim();
+        if (info.store_url?.trim()) upd.store_url = info.store_url.trim();
+        if (info.email?.trim()) upd.store_email = info.email.trim();
+        if (info.current_plan?.trim()) upd.current_plan = info.current_plan.trim();
+        if (Object.keys(upd).length > 0) {
+          await supabase.from("salla_merchants").update(upd).eq("merchant_id", merchantId);
+          console.log("تم استدراك بيانات المتجر من API سلة:", merchantId);
+        }
+      }
     }
   } catch (err) {
     console.error("rapid-task error:", err);

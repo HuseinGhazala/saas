@@ -29,6 +29,8 @@ RETURNS TABLE (
   store_url TEXT,
   store_email TEXT,
   current_plan TEXT,
+  subscription_plan_name TEXT,
+  subscription_plan_type TEXT,
   app_status TEXT
 )
 LANGUAGE sql
@@ -45,6 +47,8 @@ AS $$
     m.store_url,
     m.store_email,
     m.current_plan,
+    s.plan_name AS subscription_plan_name,
+    s.plan_type AS subscription_plan_type,
     m.app_status
   FROM public.salla_subscriptions s
   LEFT JOIN public.salla_merchants m ON m.merchant_id = s.merchant_id
@@ -52,6 +56,6 @@ AS $$
   ORDER BY s.created_at DESC NULLS LAST;
 $$;
 
-COMMENT ON FUNCTION public.get_salla_merchants() IS 'قائمة متاجر سلة مع المحاولات ومعلومات المتجر (الاسم، الرابط، الإيميل، الباقة، حالة التطبيق)';
+COMMENT ON FUNCTION public.get_salla_merchants() IS 'قائمة متاجر سلة مع المحاولات ومعلومات المتجر وباقة الاشتراك (الاسم، الرابط، الإيميل، باقة المتجر، باقة الاشتراك، حالة التطبيق)';
 GRANT EXECUTE ON FUNCTION public.get_salla_merchants() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.get_salla_merchants() TO service_role;

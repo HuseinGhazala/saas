@@ -89,7 +89,8 @@ export default function SallaMerchants() {
                   <th className="px-4 py-3 text-slate-300 font-semibold">اسم المتجر</th>
                   <th className="px-4 py-3 text-slate-300 font-semibold">رابط المتجر</th>
                   <th className="px-4 py-3 text-slate-300 font-semibold">الإيميل</th>
-                  <th className="px-4 py-3 text-slate-300 font-semibold">الباقة</th>
+                  <th className="px-4 py-3 text-slate-300 font-semibold">باقة المتجر</th>
+                  <th className="px-4 py-3 text-slate-300 font-semibold">باقة الاشتراك</th>
                   <th className="px-4 py-3 text-slate-300 font-semibold">حالة التطبيق</th>
                   <th className="px-4 py-3 text-slate-300 font-semibold">المحاولات المسموحة</th>
                   <th className="px-4 py-3 text-slate-300 font-semibold">المحاولات المستخدمة</th>
@@ -110,6 +111,9 @@ export default function SallaMerchants() {
                     </td>
                     <td className="px-4 py-3 text-slate-200 text-sm">{row.store_email || '—'}</td>
                     <td className="px-4 py-3 text-slate-200">{row.current_plan || '—'}</td>
+                    <td className="px-4 py-3 text-slate-200" title={row.subscription_plan_type || ''}>
+                      {row.subscription_plan_name || row.subscription_plan_type || '—'}
+                    </td>
                     <td className="px-4 py-3">
                       <span className={`px-2 py-0.5 rounded text-xs font-medium ${row.app_status === 'enabled' ? 'bg-green-500/20 text-green-300' : 'bg-slate-600 text-slate-400'}`}>
                         {row.app_status === 'enabled' ? 'مفعّل' : row.app_status === 'disabled' ? 'معطّل' : '—'}

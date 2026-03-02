@@ -1,16 +1,4 @@
--- قائمة تجار سلة (لصفحة "تجار سلة" في لوحة التحكم)
--- يُنفّذ مرة واحدة في Supabase SQL Editor.
--- أولاً: إضافة الأعمدة إن لم تكن موجودة، ثم إنشاء/تحديث الدالة.
-
--- 1) إضافة حقول معلومات المتجر وحالة التطبيق لجدول salla_merchants
-ALTER TABLE public.salla_merchants
-  ADD COLUMN IF NOT EXISTS store_name TEXT,
-  ADD COLUMN IF NOT EXISTS store_url TEXT,
-  ADD COLUMN IF NOT EXISTS store_email TEXT,
-  ADD COLUMN IF NOT EXISTS current_plan TEXT,
-  ADD COLUMN IF NOT EXISTS app_status TEXT;
-
--- 2) عند تغيير نوع الإرجاع: نفّذ DROP ثم CREATE.
+-- إضافة باقة الاشتراك (من salla_subscriptions) إلى قائمة تجار سلة
 DROP FUNCTION IF EXISTS public.get_salla_merchants();
 
 CREATE OR REPLACE FUNCTION public.get_salla_merchants()
@@ -51,7 +39,6 @@ AS $$
   ORDER BY s.created_at DESC NULLS LAST;
 $$;
 
-COMMENT ON FUNCTION public.get_salla_merchants() IS 'قائمة متاجر سلة مع المحاولات ومعلومات المتجر وباقة الاشتراك (الاسم، الرابط، الإيميل، باقة المتجر، باقة الاشتراك، حالة التطبيق)';
-
+COMMENT ON FUNCTION public.get_salla_merchants() IS 'قائمة متاجر سلة مع المحاولات ومعلومات المتجر وباقة الاشتراك';
 GRANT EXECUTE ON FUNCTION public.get_salla_merchants() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.get_salla_merchants() TO service_role;
