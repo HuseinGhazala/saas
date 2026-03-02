@@ -5,7 +5,8 @@
 export const PLAN_IDS = {
   FREE: 'free',
   BASIC: 'basic',
-  PRO: 'pro'
+  PRO: 'pro',
+  SALLA: 'salla'  // متجر سلة — الحدود من اشتراك سلة (المحاولات من API)، والباقي مفتوح
 }
 
 export const PLANS = {
@@ -18,8 +19,8 @@ export const PLANS = {
     canCustomLogo: false,
     canCustomSounds: false,
     canSocialLinks: false,
-    canCustomWheelStyle: false,   // كلاسيكي فقط
-    canCustomBackground: false,   // لون افتراضي فقط، لا صورة ولا تغيير لون
+    canCustomWheelStyle: false,
+    canCustomBackground: false,
     canFooterSettings: false,
     priceMonthly: 0,
     priceYearly: 0
@@ -44,7 +45,7 @@ export const PLANS = {
     nameAr: 'برو',
     nameEn: 'Pro',
     maxSegments: 999,
-    maxSpinsPerMonth: -1, // غير محدود
+    maxSpinsPerMonth: -1,
     canCustomLogo: true,
     canCustomSounds: true,
     canSocialLinks: true,
@@ -53,6 +54,21 @@ export const PLANS = {
     canFooterSettings: true,
     priceMonthly: 99,
     priceYearly: 990
+  },
+  [PLAN_IDS.SALLA]: {
+    id: PLAN_IDS.SALLA,
+    nameAr: 'سلة',
+    nameEn: 'Salla',
+    maxSegments: 999,
+    maxSpinsPerMonth: -1,
+    canCustomLogo: true,
+    canCustomSounds: true,
+    canSocialLinks: true,
+    canCustomWheelStyle: true,
+    canCustomBackground: true,
+    canFooterSettings: true,
+    priceMonthly: 0,
+    priceYearly: 0
   }
 }
 
@@ -74,10 +90,6 @@ export function getPlanLimits(planId) {
   }
 }
 
-/**
- * @param {string} planId
- * @returns {object} بيانات الباقة للعرض
- */
 export function getPlanInfo(planId) {
   return PLANS[planId] || PLANS[PLAN_IDS.FREE]
 }

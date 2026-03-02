@@ -107,7 +107,7 @@ GRANT EXECUTE ON FUNCTION public.get_plan_limits(TEXT) TO authenticated;
 
 COMMENT ON FUNCTION public.get_plan_limits(TEXT) IS 'جلب حدود الباقة بصيغة jsonb (للفرونت إند)';
 
--- تحديث الـ trigger
+-- تحديث الـ trigger: تجار سلة (من لديهم merchant_id) لا تُطبَّق عليهم قيود الباقة
 CREATE OR REPLACE FUNCTION public.settings_enforce_plan_permissions()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -115,6 +115,7 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
+  is_salla_merchant BOOLEAN;
   user_plan_id TEXT;
   plan_can_logo BOOLEAN;
   plan_can_sounds BOOLEAN;
@@ -126,6 +127,15 @@ DECLARE
   default_win_sound TEXT := 'https://www.soundjay.com/human/sounds/applause-01.mp3';
   default_lose_sound TEXT := 'https://www.soundjay.com/misc/sounds/fail-trombone-01.mp3';
 BEGIN
+  -- تجار سلة (merchant_id موجود) — لا قيود، نمرّر البيانات كما هي
+  SELECT (p.merchant_id IS NOT NULL) INTO is_salla_merchant
+  FROM profiles p
+  WHERE p.id = NEW.owner_id
+  LIMIT 1;
+  IF is_salla_merchant THEN
+    RETURN NEW;
+  END IF;
+
   SELECT COALESCE(p.plan, 'free') INTO user_plan_id
   FROM profiles p
   WHERE p.id = NEW.owner_id

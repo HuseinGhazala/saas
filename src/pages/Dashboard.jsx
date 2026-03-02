@@ -1,21 +1,17 @@
 import React, { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { useSalla } from '../contexts/SallaContext'
 import LuckyWheel from '../App'
 
 export default function Dashboard() {
   const { user, profile, loading, isAuthenticated } = useAuth()
-  const { sallaMerchantId, isSallaSession } = useSalla()
   const navigate = useNavigate()
 
-  const canAccess = isAuthenticated || isSallaSession
-
   useEffect(() => {
-    if (!loading && !canAccess) {
+    if (!loading && !isAuthenticated) {
       navigate('/login', { replace: true })
     }
-  }, [loading, canAccess, navigate])
+  }, [loading, isAuthenticated, navigate])
 
   if (loading) {
     return (
@@ -25,27 +21,34 @@ export default function Dashboard() {
     )
   }
 
-  if (!canAccess) return null
+  if (!isAuthenticated) return null
 
-  if (isSallaSession && sallaMerchantId) {
+  // النظام موحّد لسلة فقط — يجب أن يكون الحساب مرتبطاً بمتجر سلة (تثبيت التطبيق من متجر سلة)
+  if (!profile?.merchant_id) {
     return (
-      <LuckyWheel
-        merchantId={sallaMerchantId}
-        ownerId={null}
-        ownerSlug={null}
-        ownerPlan="free"
-      />
+      <div className="min-h-screen flex flex-col items-center justify-center gap-6 bg-slate-900 text-white p-6" dir="rtl" style={{ fontFamily: "'IBM Plex Sans Arabic', sans-serif" }}>
+        <h2 className="text-xl font-bold text-amber-400">عجلة الحظ لمتاجر سلة فقط</h2>
+        <p className="text-slate-300 text-center max-w-md">
+          لتستخدم العجلة يجب تثبيت التطبيق من متجر تطبيقات سلة في لوحة تحكم متجرك. بعد التثبيت ستستلم بريداً بكلمة المرور ورابط الدخول.
+        </p>
+        <a
+          href="https://salla.sa"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-amber-400 hover:text-amber-300 font-bold underline"
+        >
+          الذهاب إلى سلة ←
+        </a>
+      </div>
     )
   }
-
-  if (!user) return null
 
   return (
     <LuckyWheel
       ownerId={user.id}
-      ownerSlug={profile?.slug}
-      ownerPlan={profile?.plan}
-      merchantId={profile?.merchant_id ?? undefined}
+      ownerSlug={profile.slug}
+      ownerPlan="salla"
+      merchantId={profile.merchant_id}
     />
   )
 }

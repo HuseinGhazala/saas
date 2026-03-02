@@ -20,7 +20,7 @@ export default function Landing() {
           </h1>
         </div>
         <p className="text-slate-300 text-lg">
-          منصّة SaaS لعجلة حظ خاصة بمتجرك — جوائز حقيقية ومشاركة برابط واحد.
+          عجلة حظ لمتاجر سلة — جوائز حقيقية ومشاركة برابط واحد.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -45,7 +45,7 @@ export default function Landing() {
 
         <p className="text-slate-400 text-sm flex items-center justify-center gap-2">
           <Sparkles size={16} className="text-yellow-400" />
-          أنشئ عجلتك وشارك الرابط مع زبائنك
+          ثبّت التطبيق من متجر سلة ثم سجّل الدخول بالبريد والرقم السري المرسلين
         </p>
       </div>
     </div>

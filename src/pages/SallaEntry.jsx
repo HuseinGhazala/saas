@@ -1,23 +1,17 @@
 import React, { useEffect } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
-import { useSalla } from '../contexts/SallaContext'
+import { useNavigate } from 'react-router-dom'
 
 /**
  * صفحة دخول التاجر من سلة: سلة توجّه التاجر إلى هذا الرابط مع merchant_id أو merchant في الـ URL.
- * نحفظ الـ merchant_id في الجلسة ونوجّهه لـ /app
+ * نوجّهه لتسجيل الدخول بالبريد والرقم السري المرسلين بعد التثبيت.
  */
 export default function SallaEntry() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const { setSallaMerchantId } = useSalla()
 
   useEffect(() => {
-    const merchantId = searchParams.get('merchant_id') || searchParams.get('merchant')
-    if (merchantId) {
-      setSallaMerchantId(merchantId)
-    }
-    navigate('/app', { replace: true })
-  }, [searchParams, setSallaMerchantId, navigate])
+    navigate('/login?from=salla', { replace: true })
+  }, [navigate])
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-900" dir="rtl">

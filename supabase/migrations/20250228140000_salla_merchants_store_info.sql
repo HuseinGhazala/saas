@@ -1,8 +1,7 @@
--- قائمة تجار سلة (لصفحة "تجار سلة" في لوحة التحكم)
--- يُنفّذ مرة واحدة في Supabase SQL Editor.
--- أولاً: إضافة الأعمدة إن لم تكن موجودة، ثم إنشاء/تحديث الدالة.
+-- إضافة حقول معلومات المتجر وحالة التطبيق لجدول salla_merchants
+-- تُملأ من ويب هوك سلة + استدعاء API معلومات المستخدم/المتجر (user/info)
 
--- 1) إضافة حقول معلومات المتجر وحالة التطبيق لجدول salla_merchants
+-- إذا الجدول غير موجود (يُنشأ يدوياً أو من مشروع آخر) لا يحدث خطأ — نفّذ ALTER فقط
 ALTER TABLE public.salla_merchants
   ADD COLUMN IF NOT EXISTS store_name TEXT,
   ADD COLUMN IF NOT EXISTS store_url TEXT,
@@ -10,7 +9,13 @@ ALTER TABLE public.salla_merchants
   ADD COLUMN IF NOT EXISTS current_plan TEXT,
   ADD COLUMN IF NOT EXISTS app_status TEXT;
 
--- 2) عند تغيير نوع الإرجاع: نفّذ DROP ثم CREATE.
+COMMENT ON COLUMN public.salla_merchants.store_name IS 'اسم المتجر من سلة';
+COMMENT ON COLUMN public.salla_merchants.store_url IS 'رابط المتجر (الدومين) من سلة';
+COMMENT ON COLUMN public.salla_merchants.store_email IS 'الإيميل المسجّل للمتجر (من صلّح التطبيق)';
+COMMENT ON COLUMN public.salla_merchants.current_plan IS 'الباقة الحالية المفعّلة في سلة (مثل: pro, basic)';
+COMMENT ON COLUMN public.salla_merchants.app_status IS 'حالة التطبيق على المتجر: enabled | disabled (معطّل عند إلغاء التثبيت)';
+
+-- تغيير نوع الإرجاع يتطلب حذف الدالة ثم إعادة إنشائها
 DROP FUNCTION IF EXISTS public.get_salla_merchants();
 
 CREATE OR REPLACE FUNCTION public.get_salla_merchants()
@@ -48,6 +53,5 @@ AS $$
 $$;
 
 COMMENT ON FUNCTION public.get_salla_merchants() IS 'قائمة متاجر سلة مع المحاولات ومعلومات المتجر (الاسم، الرابط، الإيميل، الباقة، حالة التطبيق)';
-
 GRANT EXECUTE ON FUNCTION public.get_salla_merchants() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.get_salla_merchants() TO service_role;

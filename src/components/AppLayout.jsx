@@ -1,37 +1,28 @@
 import React, { useEffect, useState } from 'react'
 import { Outlet, useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { useSalla } from '../contexts/SallaContext'
 import { signOut } from '../lib/supabase'
 import { LogOut } from 'lucide-react'
 
 export default function AppLayout() {
   const { loading, isAuthenticated, profile } = useAuth()
-  const { sallaMerchantId, clearSallaSession, isSallaSession } = useSalla()
   const navigate = useNavigate()
   const [loggingOut, setLoggingOut] = useState(false)
 
-  const canAccess = isAuthenticated || isSallaSession
-
-  // زر تسجيل الخروج يظهر فقط لعميل سلة (اللي ثبّت التطبيق في متجره)، مش للاند يوزر
-  const isSallaMerchant = isSallaSession || !!(isAuthenticated && profile?.merchant_id)
+  // النظام موحّد لسلة — الدخول للمسجّلين فقط، والتحكم لمن لديهم merchant_id
+  const isSallaMerchant = !!(isAuthenticated && profile?.merchant_id)
 
   useEffect(() => {
-    if (!loading && !canAccess) {
+    if (!loading && !isAuthenticated) {
       navigate('/login', { replace: true })
     }
-  }, [loading, canAccess, navigate])
+  }, [loading, isAuthenticated, navigate])
 
   const handleLogout = async () => {
     setLoggingOut(true)
     try {
-      if (isSallaSession) {
-        clearSallaSession()
-        navigate('/', { replace: true })
-      } else {
-        await signOut()
-        navigate('/login', { replace: true })
-      }
+      await signOut()
+      navigate('/login', { replace: true })
     } catch (err) {
       console.error('Logout error:', err)
     } finally {
@@ -47,17 +38,14 @@ export default function AppLayout() {
     )
   }
 
-  if (!canAccess) return null
+  if (!isAuthenticated) return null
 
   return (
     <div className="min-h-screen flex flex-col" dir="rtl">
       <header className="flex items-center justify-between px-4 py-3 bg-slate-800/90 border-b border-slate-700 sticky top-0 z-50 backdrop-blur-sm">
         <div className="flex items-center gap-2 text-slate-300 text-sm">
           {profile?.slug && <span className="font-medium">/{profile.slug}</span>}
-          {isSallaSession && sallaMerchantId && (
-            <span className="font-medium">سلة · {sallaMerchantId}</span>
-          )}
-          {isAuthenticated && (
+          {isAuthenticated && profile?.merchant_id && (
             <Link
               to="/app/salla-merchants"
               className="font-medium text-amber-400 hover:text-amber-300 transition-colors"
@@ -66,7 +54,7 @@ export default function AppLayout() {
             </Link>
           )}
         </div>
-        {isSallaMerchant && (
+        {isAuthenticated && (
           <button
             onClick={handleLogout}
             disabled={loggingOut}

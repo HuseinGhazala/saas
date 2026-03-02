@@ -22,9 +22,9 @@ export default function DashboardPanel(props) {
   const showUpgradeToast = () => {
     toast((t) => (
       <span className="flex flex-col gap-2">
-        <span>ترقّى الباقة لتفعيل هذه الميزة والاستفادة من كل الإعدادات.</span>
+        <span>لتفعيل هذه الميزة أو زيادة المحاولات، أدر اشتراكك من متجر تطبيقات سلة.</span>
         <Link to="/app/upgrade" onClick={() => toast.dismiss(t.id)} className="font-bold text-amber-600 hover:text-amber-700 underline text-right">
-          ترقية الباقة الآن ←
+          إدارة الاشتراك من متجر سلة ←
         </Link>
       </span>
     ), { duration: 6000 });
@@ -89,7 +89,7 @@ export default function DashboardPanel(props) {
                                   )}
                                   {(currentPlan === 'free' || currentPlan === 'basic') && (
                                     <Link to="/app/upgrade" className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-bold bg-amber-500 hover:bg-amber-400 text-slate-900 transition-transform hover:scale-105 shadow-md">
-                                      <Crown size={18} /> ترقية الباقة
+                                      <Crown size={18} /> إدارة الاشتراك من سلة
                                     </Link>
                                   )}
                                   <button onClick={onSave} className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-bold flex items-center gap-2 shadow-lg transition-transform hover:scale-105"><Save size={18} /> حفظ التغييرات</button>
@@ -115,15 +115,21 @@ export default function DashboardPanel(props) {
                                   </div>
                                   <p className="text-xs text-slate-400 mt-2">
                                       {getPlanInfo(currentPlan).maxSpinsPerMonth === -1
-                                        ? 'دورات شهرية غير محدودة'
+                                        ? 'المحاولات من اشتراكك في سلة'
                                         : `حتى ${getPlanInfo(currentPlan).maxSpinsPerMonth} دورة/شهر`}
-                                      {(currentPlan === 'free' || currentPlan === 'basic') && ' — ترقية الباقة لزيادة القطاعات والدورات.'}
+                                      {(currentPlan === 'free' || currentPlan === 'basic') && ' — إدارة الاشتراك من متجر سلة لزيادة القطاعات والدورات.'}
                                   </p>
                                   {(currentPlan === 'free' || currentPlan === 'basic') && (
                                     <Link to="/app/upgrade" className="inline-flex items-center gap-2 mt-3 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold text-sm transition-colors shadow-md">
-                                      <Crown size={16} /> ترقية الباقة والدفع
+                                      <Crown size={16} /> إدارة الاشتراك من متجر سلة
                                     </Link>
                                   )}
+                                  {currentPlan === 'salla' && (
+                                    <Link to="/app/upgrade" className="inline-flex items-center gap-2 mt-3 px-4 py-2 rounded-xl bg-slate-600 hover:bg-slate-500 text-white font-bold text-sm transition-colors shadow-md">
+                                      إدارة الاشتراك من متجر سلة
+                                    </Link>
+                                  )}
+                                  {currentPlan !== 'salla' && (
                                   <details className="mt-3">
                                       <summary className="text-xs text-amber-300 cursor-pointer hover:text-amber-200">عرض الباقات والأسعار</summary>
                                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-3 text-sm">
@@ -140,6 +146,7 @@ export default function DashboardPanel(props) {
                                           })}
                                       </div>
                                   </details>
+                                  )}
                               </div>
                               )}
 
@@ -151,7 +158,7 @@ export default function DashboardPanel(props) {
                                   >
                                       {!planInfo.canCustomLogo && (
                                         <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-slate-100/80 backdrop-blur-[1px]">
-                                            <span className="bg-amber-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow-lg">⬆️ ترقية الباقة لتفعيل شعار المتجر</span>
+                                            <span className="bg-amber-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow-lg">⬆️ إدارة الاشتراك من متجر سلة لتفعيل شعار المتجر</span>
                                         </div>
                                       )}
                                       <div className={!planInfo.canCustomLogo ? 'pointer-events-none select-none opacity-70' : ''}>
@@ -286,7 +293,7 @@ export default function DashboardPanel(props) {
                                                       </svg>
                                                   </div>
                                                   <p className="font-bold text-slate-800">حديث</p>
-                                                  <p className="text-xs text-amber-600 mt-1">اضغط لترقية الباقة والتفعيل</p>
+                                                  <p className="text-xs text-amber-600 mt-1">اضغط لإدارة الاشتراك من متجر سلة والتفعيل</p>
                                               </div>
                                           </button>
                                           )}
@@ -301,7 +308,7 @@ export default function DashboardPanel(props) {
                               >
                                   {!planInfo.canCustomBackground && (
                                     <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-slate-100/80 backdrop-blur-[1px]">
-                                        <span className="bg-amber-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow-lg">⬆️ ترقية الباقة لتفعيل مظهر الخلفية</span>
+                                        <span className="bg-amber-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow-lg">⬆️ إدارة الاشتراك من متجر سلة لتفعيل مظهر الخلفية</span>
                                     </div>
                                   )}
                                   <div className={!planInfo.canCustomBackground ? 'pointer-events-none select-none opacity-70' : ''}>
@@ -379,7 +386,7 @@ export default function DashboardPanel(props) {
                               >
                                   {!planInfo.canCustomSounds && (
                                     <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-slate-100/80 backdrop-blur-[1px]">
-                                        <span className="bg-amber-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow-lg">⬆️ ترقية الباقة لتفعيل المؤثرات الصوتية</span>
+                                        <span className="bg-amber-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow-lg">⬆️ إدارة الاشتراك من متجر سلة لتفعيل المؤثرات الصوتية</span>
                                     </div>
                                   )}
                                   <div className={!planInfo.canCustomSounds ? 'pointer-events-none select-none opacity-70' : ''}>
@@ -482,7 +489,7 @@ export default function DashboardPanel(props) {
                               >
                                   {!planInfo.canSocialLinks && (
                                     <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-slate-100/80 backdrop-blur-[1px]">
-                                        <span className="bg-amber-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow-lg">⬆️ ترقية الباقة لتفعيل روابط التواصل الاجتماعي</span>
+                                        <span className="bg-amber-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow-lg">⬆️ إدارة الاشتراك من متجر سلة لتفعيل روابط التواصل الاجتماعي</span>
                                     </div>
                                   )}
                                   <div className={!planInfo.canSocialLinks ? 'pointer-events-none select-none opacity-70' : ''}>
@@ -543,7 +550,7 @@ export default function DashboardPanel(props) {
                               >
                                   {!planInfo.canFooterSettings && (
                                     <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-slate-100/80 backdrop-blur-[1px]">
-                                        <span className="bg-amber-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow-lg">⬆️ ترقية الباقة لتفعيل إعدادات الفوتر</span>
+                                        <span className="bg-amber-500 text-white px-4 py-2 rounded-lg font-bold text-sm shadow-lg">⬆️ إدارة الاشتراك من متجر سلة لتفعيل إعدادات الفوتر</span>
                                     </div>
                                   )}
                                   <div className={!planInfo.canFooterSettings ? 'pointer-events-none select-none opacity-70' : ''}>

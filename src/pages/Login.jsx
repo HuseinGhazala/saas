@@ -37,6 +37,9 @@ export default function Login() {
           <Gift className="text-amber-400" size={28} />
           <h1 className="text-2xl font-bold text-white">تسجيل الدخول</h1>
         </div>
+        <p className="text-slate-400 text-center text-sm mb-4">
+          عجلة الحظ لمتاجر سلة فقط. استخدم البريد وكلمة المرور المرسلين بعد تثبيت التطبيق من متجر سلة.
+        </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (

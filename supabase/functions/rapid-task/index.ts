@@ -34,7 +34,18 @@ async function sendWelcomeEmail(
   password: string,
   resendApiKey: string
 ): Promise<boolean> {
+  // Resend: في وضع الاختبار يُرسل فقط لبريدك. لإرسال لأي متجر تحقق من دومين في resend.com/domains وضَع SALLA_WELCOME_EMAIL_FROM
   const from = Deno.env.get("SALLA_WELCOME_EMAIL_FROM") || "onboarding@resend.dev";
+  const isTestingFrom = from.includes("resend.dev");
+  const ownerEmail = Deno.env.get("RESEND_OWNER_EMAIL")?.trim().toLowerCase();
+  if (isTestingFrom && ownerEmail && toEmail.trim().toLowerCase() !== ownerEmail) {
+    console.warn("Resend: تم تخطي إرسال إيميل الترحيب (المستلم ليس RESEND_OWNER_EMAIL). للإرسال لجميع المتاجر تحقق من دومين وضَع SALLA_WELCOME_EMAIL_FROM.");
+    return true;
+  }
+  if (isTestingFrom && !ownerEmail) {
+    console.warn("Resend: تم تخطي إرسال إيميل الترحيب لتجنب 403. ضَع RESEND_OWNER_EMAIL=bريدك@example.com أو تحقق من دومين وضَع SALLA_WELCOME_EMAIL_FROM.");
+    return true;
+  }
   const html = `
     <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto;">
       <h2>مرحباً ${name} 👋</h2>
@@ -67,6 +78,11 @@ async function sendWelcomeEmail(
     if (!res.ok) {
       const errBody = await res.text();
       console.error("Resend API error:", res.status, errBody);
+      if (res.status === 403) {
+        console.warn(
+          "Resend 403: لإرسال إيميلات لغير بريدك، تحقق من دومين في resend.com/domains وضَع SALLA_WELCOME_EMAIL_FROM إلى إيميل على هذا الدومين (مثل noreply@yourdomain.com)"
+        );
+      }
       return false;
     }
     return true;
@@ -76,7 +92,17 @@ async function sendWelcomeEmail(
   }
 }
 
-async function fetchSallaUserInfo(accessToken: string): Promise<{ email: string; name: string } | null> {
+/** استجابة سلة user/info: data.merchant أو data.store فيه معلومات المتجر */
+interface SallaStoreInfo {
+  email: string;
+  name: string;
+  store_name: string;
+  store_url: string;
+  current_plan: string;
+  store_status: string;
+}
+
+async function fetchSallaUserInfo(accessToken: string): Promise<SallaStoreInfo | null> {
   try {
     const res = await fetch(SALLA_USER_INFO_URL, {
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -85,14 +111,49 @@ async function fetchSallaUserInfo(accessToken: string): Promise<{ email: string;
     const json = await res.json();
     const data = json?.data;
     if (!data?.email) return null;
+    const merchant = data.merchant ?? data.store;
     return {
       email: String(data.email).trim(),
-      name: String(data.name || data.merchant?.name || "تاجر سلة").trim(),
+      name: String(data.name || merchant?.name || "تاجر سلة").trim(),
+      store_name: String(merchant?.name ?? "").trim() || String(data.name || "تاجر سلة").trim(),
+      store_url: String(merchant?.domain ?? "").trim(),
+      current_plan: String(merchant?.plan ?? "").trim(),
+      store_status: String(merchant?.status ?? "").trim(),
     };
   } catch (e) {
     console.error("fetchSallaUserInfo error:", e);
     return null;
   }
+}
+
+/** استخراج حقول تفاصيل الاشتراك من payload سلة (app.subscription.* أو app.installed) */
+function buildSubscriptionDetails(
+  data: Record<string, unknown>,
+  status: "active" | "expired" | "canceled"
+): Record<string, unknown> {
+  const num = (v: unknown): number | null => {
+    if (v === null || v === undefined) return null;
+    if (typeof v === "number" && !Number.isNaN(v)) return v;
+    const n = Number(String(v).replace(/,/g, ""));
+    return Number.isNaN(n) ? null : n;
+  };
+  const str = (v: unknown): string | null => (v === null || v === undefined ? null : String(v));
+  const dateStr = (v: unknown): string | null => (v === null || v === undefined ? null : String(v) || null);
+  return {
+    salla_subscription_id: num(data.subscription_id) ?? null,
+    plan_id: str(data.id) ?? null,
+    plan_type: str(data.plan_type) ?? null,
+    plan_name: str(data.plan_name) ?? null,
+    plan_period: str(data.plan_period) ?? null,
+    start_date: dateStr(data.start_date) ?? null,
+    end_date: dateStr(data.end_date) ?? null,
+    price: num(data.price) ?? null,
+    total: num(data.total) ?? null,
+    price_before_discount: num(data.price_before_discount) ?? null,
+    store_type: str(data.store_type) ?? null,
+    status,
+    raw_data: data,
+  };
 }
 
 // عدد المحاولات حسب نوع الحدث/الباقة (تقدر تغيّر الأرقام لاحقاً)
@@ -171,10 +232,23 @@ Deno.serve(async (req) => {
         const accessToken = event === "app.store.authorize" && data && typeof (data as { access_token?: string }).access_token === "string"
           ? (data as { access_token: string }).access_token
           : null;
+
+        const storeInfo = accessToken ? await fetchSallaUserInfo(accessToken) : null;
+        const merchantRow: Record<string, unknown> = {
+          merchant_id: merchantId,
+          access_token: accessToken ?? null,
+          refresh_token: (data as { refresh_token?: string }).refresh_token ?? null,
+          store_name: storeInfo?.store_name ?? null,
+          store_url: storeInfo?.store_url || null,
+          store_email: storeInfo?.email ?? null,
+          current_plan: storeInfo?.current_plan || null,
+          app_status: "enabled",
+        };
+
         if (accessToken) {
           const { error: merchantErr } = await supabase
             .from("salla_merchants")
-            .upsert({ merchant_id: merchantId, access_token: accessToken, refresh_token: (data as { refresh_token?: string }).refresh_token ?? "" }, { onConflict: "merchant_id" });
+            .upsert(merchantRow, { onConflict: "merchant_id" });
           if (merchantErr) {
             console.error("salla_merchants upsert:", merchantErr);
             return new Response(JSON.stringify({ error: "salla_merchants: " + merchantErr.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -182,17 +256,23 @@ Deno.serve(async (req) => {
         } else {
           const { error: merchantErr2 } = await supabase
             .from("salla_merchants")
-            .upsert({ merchant_id: merchantId, access_token: null, refresh_token: null }, { onConflict: "merchant_id" });
+            .upsert({ merchant_id: merchantId, access_token: null, refresh_token: null, app_status: "enabled" }, { onConflict: "merchant_id" });
           if (merchantErr2) {
             console.error("salla_merchants upsert (no token):", merchantErr2);
             return new Response(JSON.stringify({ error: "salla_merchants (run salla_merchants-allow-null-tokens.sql): " + merchantErr2.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
           }
         }
+        const { data: profileRow } = await supabase.from("profiles").select("id").eq("merchant_id", merchantId).maybeSingle();
+        const ownerId = profileRow?.id ?? null;
         const { error } = await supabase.from("salla_subscriptions").upsert(
           {
             merchant_id: merchantId,
             attempts_allowed: attemptsAllowed,
             attempts_used: 0,
+            status: "active",
+            store_type: typeof data.store_type === "string" ? data.store_type : null,
+            raw_data: data,
+            owner_id: ownerId,
           },
           { onConflict: "merchant_id" }
         );
@@ -205,67 +285,83 @@ Deno.serve(async (req) => {
         }
 
         // إنشاء حساب + إيميل (البريد والرقم السري ورابط الدخول)
-        if (accessToken) {
-          const userInfo = await fetchSallaUserInfo(accessToken);
-          if (userInfo?.email) {
-            const tempPassword = generatePassword(12);
-            const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-              email: userInfo.email,
-              password: tempPassword,
-              email_confirm: true,
-              user_metadata: { store_name: userInfo.name, salla_merchant_id: merchantId },
-            });
+        if (accessToken && storeInfo?.email) {
+          const tempPassword = generatePassword(12);
+          const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+            email: storeInfo.email,
+            password: tempPassword,
+            email_confirm: true,
+            user_metadata: { store_name: storeInfo.store_name || storeInfo.name, salla_merchant_id: merchantId },
+          });
             if (!authError && authData?.user) {
               const { error: profileError } = await supabase
                 .from("profiles")
                 .update({
                   merchant_id: merchantId,
-                  store_name: userInfo.name || undefined,
+                  store_name: storeInfo.store_name || storeInfo.name || undefined,
                 })
                 .eq("id", authData.user.id);
               if (profileError) {
                 console.error("profiles update merchant_id:", profileError);
               }
+              await supabase.from("salla_subscriptions").update({ owner_id: authData.user.id }).eq("merchant_id", merchantId);
               const resendKey = Deno.env.get("RESEND_API_KEY");
-              if (resendKey) {
-                const sent = await sendWelcomeEmail(userInfo.email, userInfo.name, tempPassword, resendKey);
-                if (!sent) console.warn("Failed to send welcome email to", userInfo.email);
-              } else {
-                console.warn("RESEND_API_KEY not set — لم يتم إرسال إيميل الترحيب");
-              }
-            } else if (authError?.message?.toLowerCase().includes("already")) {
-              const { data: list } = await supabase.auth.admin.listUsers({ perPage: 1000 });
-              const userByEmail = list?.users?.find((u) => u.email === userInfo.email);
-              if (userByEmail) {
-                await supabase.from("profiles").update({ merchant_id: merchantId }).eq("id", userByEmail.id);
-              }
-            } else if (authError) {
-              console.error("createUser error:", authError);
+            if (resendKey) {
+              const sent = await sendWelcomeEmail(storeInfo.email, storeInfo.name, tempPassword, resendKey);
+              if (!sent) console.warn("Failed to send welcome email to", storeInfo.email);
+            } else {
+              console.warn("RESEND_API_KEY not set — لم يتم إرسال إيميل الترحيب");
             }
+          } else if (authError?.message?.toLowerCase().includes("already")) {
+            const { data: list } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+            const userByEmail = list?.users?.find((u) => u.email === storeInfo.email);
+            if (userByEmail) {
+              await supabase.from("profiles").update({ merchant_id: merchantId }).eq("id", userByEmail.id);
+              await supabase.from("salla_subscriptions").update({ owner_id: userByEmail.id }).eq("merchant_id", merchantId);
+            }
+          } else if (authError) {
+            console.error("createUser error:", authError);
           }
         }
         break;
       }
       case "app.trial.started": {
-        const trialAttempts = 1; // التجربة = محاولة واحدة فقط
+        const trialAttempts = 1;
+        const details = buildSubscriptionDetails(data, "active");
+        const { data: profileRow } = await supabase.from("profiles").select("id").eq("merchant_id", merchantId).maybeSingle();
         await supabase.from("salla_subscriptions").upsert(
-          { merchant_id: merchantId, attempts_allowed: trialAttempts, attempts_used: 0 },
+          {
+            merchant_id: merchantId,
+            attempts_allowed: trialAttempts,
+            attempts_used: 0,
+            ...details,
+            owner_id: profileRow?.id ?? null,
+          },
           { onConflict: "merchant_id" }
         );
         break;
       }
       case "app.trial.expired":
       case "app.trial.canceled": {
-        await supabase.from("salla_subscriptions").update({ attempts_allowed: 0 }).eq("merchant_id", merchantId);
+        await supabase.from("salla_subscriptions").update({
+          attempts_allowed: 0,
+          status: event === "app.trial.expired" ? "expired" : "canceled",
+          raw_data: data,
+        }).eq("merchant_id", merchantId);
         break;
       }
       case "app.subscription.started":
       case "app.subscription.renewed": {
         const attemptsAllowed = getAttemptsAllowed(event, data);
+        const details = buildSubscriptionDetails(data, "active");
+        const { data: profileRow } = await supabase.from("profiles").select("id").eq("merchant_id", merchantId).maybeSingle();
+        const ownerId = profileRow?.id ?? null;
         const { error } = await supabase.from("salla_subscriptions").upsert(
           {
             merchant_id: merchantId,
             attempts_allowed: attemptsAllowed,
+            ...details,
+            owner_id: ownerId,
           },
           { onConflict: "merchant_id" }
         );
@@ -276,17 +372,31 @@ Deno.serve(async (req) => {
             { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
+        // تحديث الباقة الحالية في salla_merchants إن وُجدت في الـ payload
+        const planName = (details.plan_name as string) || (data as { plan?: string }).plan;
+        if (planName && typeof planName === "string") {
+          await supabase.from("salla_merchants").update({ current_plan: String(planName).trim() }).eq("merchant_id", merchantId);
+        }
         break;
       }
       case "app.subscription.expired":
       case "app.subscription.canceled":
       case "app.uninstalled": {
+        const newStatus = event === "app.subscription.expired" ? "expired" : event === "app.subscription.canceled" ? "canceled" : null;
+        const updatePayload: Record<string, unknown> = { attempts_allowed: 0 };
+        if (newStatus) {
+          updatePayload.status = newStatus;
+          updatePayload.raw_data = data;
+        }
         const { error } = await supabase
           .from("salla_subscriptions")
-          .update({ attempts_allowed: 0 })
+          .update(updatePayload)
           .eq("merchant_id", merchantId);
         if (error) {
           console.error("salla_subscriptions update (expired/canceled):", error);
+        }
+        if (event === "app.uninstalled") {
+          await supabase.from("salla_merchants").update({ app_status: "disabled" }).eq("merchant_id", merchantId);
         }
         break;
       }

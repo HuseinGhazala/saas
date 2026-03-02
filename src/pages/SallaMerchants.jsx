@@ -87,6 +87,10 @@ export default function SallaMerchants() {
                 <tr className="border-b border-slate-700 bg-slate-800">
                   <th className="px-4 py-3 text-slate-300 font-semibold">رقم المتجر</th>
                   <th className="px-4 py-3 text-slate-300 font-semibold">اسم المتجر</th>
+                  <th className="px-4 py-3 text-slate-300 font-semibold">رابط المتجر</th>
+                  <th className="px-4 py-3 text-slate-300 font-semibold">الإيميل</th>
+                  <th className="px-4 py-3 text-slate-300 font-semibold">الباقة</th>
+                  <th className="px-4 py-3 text-slate-300 font-semibold">حالة التطبيق</th>
                   <th className="px-4 py-3 text-slate-300 font-semibold">المحاولات المسموحة</th>
                   <th className="px-4 py-3 text-slate-300 font-semibold">المحاولات المستخدمة</th>
                   <th className="px-4 py-3 text-slate-300 font-semibold">تاريخ التسجيل</th>
@@ -97,6 +101,20 @@ export default function SallaMerchants() {
                   <tr key={row.merchant_id} className="border-b border-slate-700/80 hover:bg-slate-700/30 transition-colors">
                     <td className="px-4 py-3 text-white font-mono">{row.merchant_id}</td>
                     <td className="px-4 py-3 text-slate-200">{row.store_name || '—'}</td>
+                    <td className="px-4 py-3 text-slate-200">
+                      {row.store_url ? (
+                        <a href={row.store_url} target="_blank" rel="noopener noreferrer" className="text-amber-400 hover:underline truncate max-w-[140px] inline-block" title={row.store_url}>
+                          {row.store_url.replace(/^https?:\/\//, '')}
+                        </a>
+                      ) : '—'}
+                    </td>
+                    <td className="px-4 py-3 text-slate-200 text-sm">{row.store_email || '—'}</td>
+                    <td className="px-4 py-3 text-slate-200">{row.current_plan || '—'}</td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${row.app_status === 'enabled' ? 'bg-green-500/20 text-green-300' : 'bg-slate-600 text-slate-400'}`}>
+                        {row.app_status === 'enabled' ? 'مفعّل' : row.app_status === 'disabled' ? 'معطّل' : '—'}
+                      </span>
+                    </td>
                     <td className="px-4 py-3 text-slate-200">{row.attempts_allowed ?? '—'}</td>
                     <td className="px-4 py-3 text-slate-200">{row.attempts_used ?? '—'}</td>
                     <td className="px-4 py-3 text-slate-400 text-sm">{formatDate(row.created_at)}</td>

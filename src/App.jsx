@@ -29,7 +29,7 @@ import {
   checkSpinEligibility,
   incrementAttemptsUsed
 } from './lib/supabase';
-import { canAddSegment as planCanAddSegment, getPlanInfo, getPlanLimits } from './lib/plans';
+import { canAddSegment as planCanAddSegment, getPlanInfo } from './lib/plans';
 import ConfettiEffect from './components/ConfettiEffect.jsx';
 import Footer from './components/Footer.jsx';
 import RegistrationModal from './components/RegistrationModal.jsx';
@@ -37,17 +37,11 @@ import WinnerModal from './components/WinnerModal.jsx';
 import DashboardPanel from './components/DashboardPanel.jsx';
 import toast from 'react-hot-toast';
 
-const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan = 'free', merchantId = null }) => {
+const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan = 'salla', merchantId = null }) => {
   const navigate = useNavigate();
   const apiKey = ""; 
 
-  // عدد المحاولات من الباقة فقط (لا يحددها التاجر)
-  const getMaxSpinsFromPlan = (plan) => {
-    const L = getPlanLimits(plan || 'free');
-    return L.maxSpinsPerMonth === -1 ? 9999 : Math.max(1, L.maxSpinsPerMonth);
-  };
-
-  // لا يوجد رابط افتراضي - يجب إدخاله من لوحة التحكم 
+  // النظام موحّد لسلة — المحاولات دائماً من API سلة عند وجود merchantId 
 
   // تعريف الكوبونات الافتراضية مع الأوزان (الاحتمالات)
   const initialSegments = [
@@ -261,10 +255,9 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan =
   const [segments, setSegments] = useState(loadedSettings?.segments || initialSegments);
   const [availableIds, setAvailableIds] = useState((loadedSettings?.segments || initialSegments).map(s => s.id));
   
-  // التحكم في عدد المحاولات (من الباقة أو سلة فقط — لا يحددها التاجر)
-  const defaultMax = ownerId && !merchantId ? getMaxSpinsFromPlan(ownerPlan) : (loadedSettings?.maxSpins || 1);
-  const [maxSpins, setMaxSpins] = useState(merchantId ? 1 : defaultMax);
-  const [remainingSpins, setRemainingSpins] = useState(merchantId ? 1 : defaultMax);
+  // التحكم في عدد المحاولات (سلة فقط: من API عند وجود merchantId، وإلا من الإعدادات المحملة للعرض العام)
+  const [maxSpins, setMaxSpins] = useState(merchantId ? 1 : (loadedSettings?.maxSpins || 1));
+  const [remainingSpins, setRemainingSpins] = useState(merchantId ? 1 : (loadedSettings?.maxSpins || 1));
   const [storeLogo, setStoreLogo] = useState(loadedSettings?.logo || null);
   
   // إعدادات الخلفية (محدثة لدعم صورتين)
@@ -288,7 +281,7 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan =
   const [enableDevToolsProtection, setEnableDevToolsProtection] = useState(loadedSettings?.enableDevToolsProtection !== undefined ? loadedSettings.enableDevToolsProtection : true);
 
   // شكل العجلة
-  const [wheelStyle, setWheelStyle] = useState(ownerPlan === 'free' ? 'classic' : (loadedSettings?.wheelStyle || 'classic'));
+  const [wheelStyle, setWheelStyle] = useState((ownerPlan === 'free' ? 'classic' : (loadedSettings?.wheelStyle || 'classic')));
 
   const [socialLinks, setSocialLinks] = useState(loadedSettings?.socialLinks || {
     facebook: '',
@@ -543,15 +536,10 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan =
             }
           });
           
-          // تحديث جميع الحالات بالبيانات من السحابة (عدد المحاولات من الباقة فقط عند وجود مالك غير سلة)
+          // تحديث الحالات من السحابة (المحاولات لسلة من API لاحقاً)
           setSegments(cleanedSegments);
           setAvailableIds(cleanedSegments.map(s => s.id));
-          if (ownerId && !merchantId) {
-            const m = getMaxSpinsFromPlan(ownerPlan);
-            setMaxSpins(m);
-            setRemainingSpins(m);
-            if (ownerPlan === 'free') setWheelStyle('classic');
-          } else if (!merchantId) {
+          if (!merchantId) {
             setMaxSpins(cloudSettings.maxSpins || 1);
             setRemainingSpins(cloudSettings.maxSpins || 1);
           }
@@ -613,7 +601,7 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan =
           
           // حفظ في localStorage كنسخة احتياطية (باستخدام cleanedSegments)
           localStorage.setItem('wheelSegments', JSON.stringify(cleanedSegments));
-          localStorage.setItem('maxSpins', (ownerId && !merchantId ? getMaxSpinsFromPlan(ownerPlan) : (cloudSettings.maxSpins || 1)).toString());
+          localStorage.setItem('maxSpins', (cloudSettings.maxSpins || 1).toString());
           if (cloudSettings.logo) {
             localStorage.setItem('storeLogo', cloudSettings.logo);
           } else {
@@ -640,12 +628,7 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan =
           if (localData) {
             setSegments(localData.segments || initialSegments);
             setAvailableIds((localData.segments || initialSegments).map(s => s.id));
-            if (ownerId && !merchantId) {
-              const m = getMaxSpinsFromPlan(ownerPlan);
-              setMaxSpins(m);
-              setRemainingSpins(m);
-              if (ownerPlan === 'free') setWheelStyle('classic');
-            } else {
+            if (!merchantId) {
               setMaxSpins(localData.maxSpins || 1);
               setRemainingSpins(localData.maxSpins || 1);
             }
@@ -691,12 +674,7 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan =
         if (localData) {
           setSegments(localData.segments || initialSegments);
           setAvailableIds((localData.segments || initialSegments).map(s => s.id));
-          if (ownerId && !merchantId) {
-            const m = getMaxSpinsFromPlan(ownerPlan);
-            setMaxSpins(m);
-            setRemainingSpins(m);
-            if (ownerPlan === 'free') setWheelStyle('classic');
-          } else {
+          if (!merchantId) {
             setMaxSpins(localData.maxSpins || 1);
             setRemainingSpins(localData.maxSpins || 1);
           }
@@ -833,7 +811,7 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan =
       const eligibility = await checkSpinEligibility(merchantId);
       if (!eligibility.eligible) {
         if (eligibility.error === 'attempts_exceeded') {
-          toast.error('انتهت محاولاتك لهذا الشهر. يمكنك ترقية الباقة من متجر سلة.');
+          toast.error('انتهت محاولاتك لهذا الشهر. يمكنك ترقية الاشتراك من متجر سلة.');
         } else if (eligibility.error === 'merchant_not_found') {
           toast.error('لم يتم العثور على اشتراكك. ثبّت التطبيق من متجر سلة أولاً.');
         } else {
@@ -1288,7 +1266,7 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan =
                   onClick={() => { navigate('/app/upgrade'); toast.dismiss(t.id); }}
                   className="text-sm font-bold text-amber-300 hover:text-amber-200 underline text-right"
                 >
-                  ترقية الباقة الآن ←
+                  إدارة الاشتراك من متجر سلة ←
                 </button>
               </span>
             ),
@@ -1412,10 +1390,8 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan =
   };
 
   const handleSaveDashboard = async () => {
-      // حفظ في state
-      const planLimits = getPlanLimits(ownerPlan);
-      const maxSpinsFromPlan = planLimits.maxSpinsPerMonth === -1 ? 9999 : Math.max(1, planLimits.maxSpinsPerMonth);
-      const effectiveMaxSpins = merchantId ? maxSpins : maxSpinsFromPlan;
+      // سلة فقط — المحاولات من API، نُبقي القيمة الحالية عند الحفظ
+      const effectiveMaxSpins = maxSpins;
       setSegments(tempSegments);
       setMaxSpins(effectiveMaxSpins);
       setRemainingSpins(effectiveMaxSpins);
