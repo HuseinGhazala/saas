@@ -64,34 +64,6 @@ export const updateProfile = async (userId, updates) => {
   return true
 }
 
-// ========== Plans (الباقات من Supabase — عدّل من جدول plans) ==========
-/** جلب حدود باقة واحدة (RPC get_plan_limits). يُرجع null إذا فشل الطلب. */
-export const getPlanLimitsFromSupabase = async (planId) => {
-  try {
-    const { data, error } = await supabase.rpc('get_plan_limits', { plan_id: planId || 'free' })
-    if (error) return null
-    return data
-  } catch (e) {
-    console.error('getPlanLimitsFromSupabase:', e)
-    return null
-  }
-}
-
-/** جلب كل الباقات من جدول plans (لصفحة الترقية أو لوحة التحكم). */
-export const getPlansFromSupabase = async () => {
-  try {
-    const { data, error } = await supabase
-      .from('plans')
-      .select('*')
-      .order('price_monthly', { ascending: true })
-    if (error) return null
-    return data
-  } catch (e) {
-    console.error('getPlansFromSupabase:', e)
-    return null
-  }
-}
-
 // ========== Settings (بالنسبة لمالك مسجّل - SaaS) ==========
 export const getSettings = async (ownerId) => {
   if (!ownerId) return null
@@ -283,26 +255,7 @@ export const updateSegmentsForSlug = async (slug, segments) => {
 // ========== Salla Spin-to-Win: subscription attempts ==========
 
 /**
- * جلب قائمة تجار سلة (لصفحة "تجار سلة")
- * يتطلب مستخدماً مسجلاً (authenticated).
- */
-export const getSallaMerchants = async () => {
-  try {
-    const { data, error } = await supabase.rpc('get_salla_merchants')
-    if (error) {
-      console.error('Error getSallaMerchants:', error)
-      return { data: [], error: error.message }
-    }
-    return { data: data ?? [], error: null }
-  } catch (e) {
-    console.error('Error in getSallaMerchants:', e)
-    return { data: [], error: e.message }
-  }
-}
-
-/**
  * Check if a merchant has spins left before allowing a spin.
- * Uses RPC so it works for anon (public wheel) and authenticated.
  * @param {number|string} merchantId - Salla merchant ID (bigint)
  * @returns {{ eligible: boolean, attemptsUsed?: number, attemptsAllowed?: number, error?: string }}
  */
@@ -311,22 +264,27 @@ export const checkSpinEligibility = async (merchantId) => {
     return { eligible: false, error: 'merchant_id_required' }
   }
   try {
-    const { data, error } = await supabase.rpc('get_spin_eligibility', {
-      p_merchant_id: Number(merchantId)
-    })
+    const { data, error } = await supabase
+      .from('salla_subscriptions')
+      .select('attempts_used, attempts_allowed')
+      .eq('merchant_id', Number(merchantId))
+      .maybeSingle()
 
     if (error) {
       console.error('Error checkSpinEligibility:', error)
       return { eligible: false, error: error.message }
     }
-    const allowed = data?.attempts_allowed ?? 0
-    const used = data?.attempts_used ?? 0
+    if (!data) {
+      return { eligible: false, error: 'merchant_not_found' }
+    }
+
+    const { attempts_used: used = 0, attempts_allowed: allowed = 0 } = data
     const eligible = used < allowed
     return {
       eligible,
       attemptsUsed: used,
       attemptsAllowed: allowed,
-      ...(eligible ? {} : { error: allowed === 0 && used === 0 ? 'merchant_not_found' : 'attempts_exceeded' })
+      ...(eligible ? {} : { error: 'attempts_exceeded' })
     }
   } catch (e) {
     console.error('Error in checkSpinEligibility:', e)

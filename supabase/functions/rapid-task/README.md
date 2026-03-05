@@ -29,3 +29,27 @@
 | `app.subscription.expired` / `app.subscription.canceled` / `app.uninstalled` | جعل المحاولات المسموحة = 0 |
 
 المتغيرات `SUPABASE_URL` و `SUPABASE_SERVICE_ROLE_KEY` تُضبط تلقائياً عند النشر على Supabase.
+
+## فحص وصول البريد (إيميل ترحيب تجريبي)
+
+للتأكد أن الإيميل يصل بدون تثبيت التطبيق من سلة:
+
+1. في **Supabase → Edge Functions → Secrets** أضف:
+   - **Name:** `TEST_EMAIL_SECRET`  
+   - **Value:** كلمة سر تختارها أنت (مثل `my-test-secret-123`).
+
+2. بعد نشر الدالة، أرسل طلب POST للرابط:
+   ```
+   https://pjgvvgewjgsxufxtbrzv.supabase.co/functions/v1/rapid-task
+   ```
+   مع الـ body (JSON):
+   ```json
+   {
+     "test_email": true,
+     "email": "بريدك@example.com",
+     "secret": "نفس قيمة TEST_EMAIL_SECRET",
+     "name": "اسم تجريبي"
+   }
+   ```
+
+3. إذا كان الإعداد صحيحاً سترد الدالة بـ `ok: true` وستستلم على البريد المذكور إيميل ترحيب بنفس شكل إيميل التاجر (بيانات دخول ورابط لوحة التحكم). تحقق من صندوق الوارد والسبام.
